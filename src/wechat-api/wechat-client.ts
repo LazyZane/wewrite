@@ -421,6 +421,7 @@ export class WechatClient {
 		
 		try {
 			this.plugin.showSpinner($t('wechat-api.uploading-material-type', [type?type:'unknown']))
+
 			const response = await requestUrl({
 				url: url,
 				method: "POST",
@@ -430,15 +431,18 @@ export class WechatClient {
 				body: body.buffer as ArrayBuffer,
 			});
 
-			// return result; // 返回上传结果
 			this.plugin.hideSpinner()
 			const resData = await response.json;
+
 			if (resData.errcode === undefined || resData.errcode == 0) {
 				this.plugin.messageService.sendMessage(
 					(type + "-item-updated") as MSG_TYPE,
 					resData
 				);
+			} else {
+				console.error(`[WeWrite] Upload failed with error code: ${resData.errcode}, message: ${resData.errmsg}`);
 			}
+
 			return {
 				url: resData.url || "",
 				media_id: resData.media_id || "",
@@ -447,8 +451,15 @@ export class WechatClient {
 			};
 		} catch (error) {
 			this.plugin.hideSpinner()
-			console.error("上传素材时出错:", error);
-			throw error;
+			console.error(`[WeWrite] Upload error:`, error);
+
+			// 返回错误信息而不是抛出异常
+			return {
+				url: "",
+				media_id: "",
+				errcode: -1,
+				errmsg: error.message || "Upload failed",
+			};
 		}
 	}
 	public async getMaterialList(

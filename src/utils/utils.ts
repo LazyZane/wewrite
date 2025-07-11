@@ -24,30 +24,55 @@ export function areObjectsEqual(obj1: any, obj2: any): boolean {
 export function fetchImageBlob(url: string): Promise<Blob> {
     return new Promise(async (resolve, reject) => {
         if (!url) {
-            console.error(`Invalid URL: ${url}`);
+            console.error(`[WeWrite] Invalid URL: ${url}`);
+            reject(new Error(`Invalid URL: ${url}`));
             return;
         }
+
         if (url.startsWith('http://') || url.startsWith('https://')) {
-
-
             try {
                 const response = await requestUrl(url);
+
                 if (!response.arrayBuffer) {
-                    console.error(`Failed to fetch image from ${url}`);
+                    console.error(`[WeWrite] Failed to fetch image from ${url}: No arrayBuffer in response`);
+                    reject(new Error(`Failed to fetch image from ${url}: No arrayBuffer in response`));
                     return;
                 }
-                const blob = new Blob([response.arrayBuffer]);
+
+                // 尝试从响应头获取Content-Type
+                let contentType = 'image/jpeg'; // 默认类型
+                if (response.headers && response.headers['content-type']) {
+                    contentType = response.headers['content-type'];
+                } else {
+                    // 尝试从URL扩展名推断类型
+                    const urlLower = url.toLowerCase();
+                    if (urlLower.includes('.png')) {
+                        contentType = 'image/png';
+                    } else if (urlLower.includes('.gif')) {
+                        contentType = 'image/gif';
+                    } else if (urlLower.includes('.webp')) {
+                        contentType = 'image/webp';
+                    } else if (urlLower.includes('.bmp')) {
+                        contentType = 'image/bmp';
+                    }
+                }
+
+                const blob = new Blob([response.arrayBuffer], { type: contentType });
                 resolve(blob);
             } catch (error) {
-                console.error(`Error fetching image from ${url}:`, error);
-                return;
+                console.error(`[WeWrite] Error fetching image from ${url}:`, error);
+                reject(error);
             }
         } else {
-            const blob = await fetch(url).then(response => response.blob());
-            resolve(blob);
-
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                resolve(blob);
+            } catch (error) {
+                console.error(`[WeWrite] Error fetching non-HTTP image from ${url}:`, error);
+                reject(error);
+            }
         }
-
     });
 }
 

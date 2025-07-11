@@ -8,8 +8,32 @@ import { WechatClient } from './../wechat-api/wechat-client';
 import WeWritePlugin from 'src/main';
 import { log } from 'console';
 function imageFileName(mime:string){
-    const type = mime.split('/')[1]
-    return `image-${new Date().getTime()}.${type}`
+    // 如果mime为空或无效，默认使用jpg
+    if (!mime || mime === '' || !mime.includes('/')) {
+        return `image-${new Date().getTime()}.jpg`;
+    }
+
+    const parts = mime.split('/');
+    if (parts.length < 2) {
+        return `image-${new Date().getTime()}.jpg`;
+    }
+
+    let type = parts[1];
+
+    // 处理常见的mime类型映射
+    const mimeMap: {[key: string]: string} = {
+        'jpeg': 'jpg',
+        'png': 'png',
+        'gif': 'gif',
+        'webp': 'webp',
+        'bmp': 'bmp',
+        'svg+xml': 'svg'
+    };
+
+    // 如果是已知类型，使用映射；否则默认jpg
+    const extension = mimeMap[type] || 'jpg';
+
+    return `image-${new Date().getTime()}.${extension}`;
 }
 export function svgToPng(svgData: string): Promise<Blob> {
     return new Promise((resolve, reject) => {
@@ -115,50 +139,64 @@ export async function uploadCanvas(root:HTMLElement, wechatClient:WechatClient):
 
 export async function uploadURLImage(root:HTMLElement, wechatClient:WechatClient):Promise<void>{
     const images: HTMLImageElement[] = []
-    
+
     root.querySelectorAll('img').forEach (img => {
         images.push(img)
     })
-    
-    const uploadPromises = images.map(async (img) => {
-        let blob:Blob|undefined 
+
+    const uploadPromises = images.map(async (img, index) => {
+        const originalSrc = img.src;
+        let blob:Blob|undefined
+
+        // 跳过微信图床图片
         if (img.src.includes('://mmbiz.qpic.cn/')){
             return;
         }
+
+        // 处理Base64图片
         else if (img.src.startsWith('data:image/')){
             blob = dataURLtoBlob(img.src);
-        }else{
-            // blob = await fetch(img.src).then(res => res.blob());
-            blob = await fetchImageBlob(img.src)
-            // try {
-            //     const response = await requestUrl(img.src);
-            //     if (!response.arrayBuffer) {
-            //         console.error(`Failed to fetch image from ${img.src}`);
-            //         return;
-            //     }
-            //     blob = new Blob([response.arrayBuffer]);
-            // } catch (error) {
-            //     console.error(`Error fetching image from ${img.src}:`, error);
-            //     return;
-            // }
         }
-        
-        if (blob === undefined){
-            return
-            
-        }else{
 
-            await wechatClient.uploadMaterial(blob, imageFileName(blob.type)).then(res => {
-                if (res){
-                    img.src = res.url
-                }else{
-                    console.error(`upload image failed.`);
-                    
-                }
-            })
+        // 处理外部链接图片
+        else{
+            try {
+                blob = await fetchImageBlob(img.src);
+            } catch (error) {
+                console.error(`[WeWrite] Failed to fetch image from ${originalSrc}:`, error);
+                return; // 保持原链接，不进行上传
+            }
+        }
+
+        // 上传到微信
+        if (blob === undefined){
+            return;
+        }
+
+        try {
+            const res = await wechatClient.uploadMaterial(blob, imageFileName(blob.type));
+
+            if (res && res.url){
+                img.src = res.url; // 替换为微信CDN链接
+                // 添加data属性记录原始链接
+                img.setAttribute('data-original-src', originalSrc);
+            } else {
+                const errorCode = res && typeof res === 'object' ? res.errcode : 'unknown';
+                const errorMsg = res && typeof res === 'object' ? res.errmsg : 'unknown';
+                console.error(`[WeWrite] Upload failed for image: ${originalSrc}, error code: ${errorCode}, message: ${errorMsg}`);
+            }
+        } catch (error) {
+            console.error(`[WeWrite] Error uploading image ${originalSrc}:`, error);
         }
     })
-    await Promise.all(uploadPromises)
+
+    await Promise.all(uploadPromises);
+
+    // 验证上传结果
+    const remainingExternalImages = root.querySelectorAll('img[src^="http"]:not([src*="mmbiz.qpic.cn"])');
+    if (remainingExternalImages.length > 0) {
+        console.warn(`[WeWrite] Warning: ${remainingExternalImages.length} external images were not uploaded successfully`);
+    }
 }
 // export async function uploadURLBackgroundImage(root:HTMLElement, wechatClient:WechatClient):Promise<void>{
 //     const bgEls: Map<string, HTMLElement>  = new Map()
