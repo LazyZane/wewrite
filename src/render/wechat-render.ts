@@ -144,7 +144,7 @@ export class WechatRender {
 		container: HTMLElement,
 		view: Component
 	) {
-		//render the markdown content, 
+		//render the markdown content,
 		container.empty();
 		container.show();
 
@@ -152,20 +152,29 @@ export class WechatRender {
 		const  renderContainer = container.createDiv({cls:'markdown-preview-view'})
 		const sizer = renderContainer.createDiv({cls:'markdown-preview-sizer'})
 		const {app} = this.plugin
-		 
+
 		// const renderer = new CustomMarkdownView(app, sizer, path, view);
 		// // this.plugin.registerMarkdownRendererChild(renderer);
 		// await renderer.onload();
-		await ObsidianMarkdownRenderer.getInstance(this.plugin.app).render(
+		const processedMarkdown = await ObsidianMarkdownRenderer.getInstance(this.plugin.app).render(
 			path,
 			sizer,
-			view
+			view,
+			this.plugin
 		);
 
-		
-		
-		
-		const  rendered = await this.delayParse(path);
+		// 使用处理后的markdown内容（包含头尾内容）进行渲染
+		let rendered: string;
+		if (processedMarkdown) {
+			// 如果有处理后的markdown，直接解析它
+			let html = await this.parse(processedMarkdown);
+			html = await this.postprocess(html);
+			rendered = html;
+		} else {
+			// 如果没有处理后的markdown，使用原来的方法
+			rendered = await this.delayParse(path);
+		}
+
 		//clean up the rendered markdown content
 		container.empty();
 		container.hide();

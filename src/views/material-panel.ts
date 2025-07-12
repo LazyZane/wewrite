@@ -96,7 +96,7 @@ export class MaterialPanel {
 		const menu = new Menu();
 
 		if (mediaItem.type === 'image') {
-			const urls = AssetsManager.getInstance(this.plugin.app, this.plugin).getImageUsedUrl(mediaItem)
+			const urls = this.plugin.assetsManager.getImageUsedUrl(mediaItem)
 			if (urls === null || urls === undefined) {
 				menu.addItem((item) => {
 					item.setTitle($t('views.delete-image'))

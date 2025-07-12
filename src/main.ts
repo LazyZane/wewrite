@@ -60,6 +60,38 @@ const DEFAULT_SETTINGS: WeWriteSetting = {
 		frequency_penalty: 0,
 		presence_penalty: 0,
 	},
+	// 开头结尾模板默认配置
+	headerTemplate: {
+		enabled: false,
+		template: `![]({{headerImage}})
+
+**{{brandName}}** | {{tagline}}
+
+---
+`,
+		variables: {
+			brandName: '',
+			tagline: '',
+			headerImage: ''
+		}
+	},
+	footerTemplate: {
+		enabled: false,
+		template: `---
+
+![]({{footerImage}})
+
+**{{callToAction}}**
+
+{{contactInfo}}
+
+*{{currentDate}}*`,
+		variables: {
+			footerImage: '',
+			callToAction: '感谢阅读！',
+			contactInfo: '- 🔔 关注我获取更多精彩内容\n- 💬 欢迎留言交流讨论'
+		}
+	}
 };
 
 export default class WeWritePlugin extends Plugin {
@@ -853,14 +885,51 @@ export default class WeWritePlugin extends Plugin {
 		initDraftDB();
 	}
 	async onload() {
-		this.initDB();
-		this.messageService = new MessageService();
-		await this.loadSettings();
-		this.wechatClient = WechatClient.getInstance(this);
-		this.assetsManager = await AssetsManager.getInstance(this.app, this);
-		this.aiClient = AiClient.getInstance(this);
+		try {
+			console.log('[WeWrite] Starting plugin load...');
 
-		this.registerViews();
+			// 检查移动端环境
+			const isMobile = (this.app as any).isMobile || false;
+			console.log(`[WeWrite] Environment: ${isMobile ? 'Mobile' : 'Desktop'}`);
+
+			// 移动端特殊处理
+			if (isMobile) {
+				console.log('[WeWrite] Applying mobile-specific configurations...');
+				// 添加移动端特定的错误处理
+				window.addEventListener('error', (event) => {
+					console.error('[WeWrite Mobile] Global error:', event.error);
+				});
+
+				window.addEventListener('unhandledrejection', (event) => {
+					console.error('[WeWrite Mobile] Unhandled promise rejection:', event.reason);
+				});
+			}
+
+			this.initDB();
+			console.log('[WeWrite] Database initialized');
+
+			this.messageService = new MessageService();
+			console.log('[WeWrite] Message service initialized');
+
+			await this.loadSettings();
+			console.log('[WeWrite] Settings loaded');
+
+			// 移动端可能需要延迟初始化某些服务
+			if (isMobile) {
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			this.wechatClient = WechatClient.getInstance(this);
+			console.log('[WeWrite] WeChat client initialized');
+
+			this.assetsManager = await AssetsManager.getInstance(this.app, this);
+			console.log('[WeWrite] Assets manager initialized');
+
+			this.aiClient = AiClient.getInstance(this);
+			console.log('[WeWrite] AI client initialized');
+
+			this.registerViews();
+			console.log('[WeWrite] Views registered');
 
 		this.addCommand({
 			id: "open-previewer",
@@ -898,6 +967,24 @@ export default class WeWritePlugin extends Plugin {
 		this.messageService.registerListener('hide-spinner', () => {
 			this.hideSpinner();
 		})
+
+		console.log('[WeWrite] Plugin loaded successfully');
+
+		} catch (error) {
+			console.error('[WeWrite] Plugin load failed:', error);
+			console.error('[WeWrite] Error stack:', error.stack);
+
+			// 在移动端显示更友好的错误信息
+			const isMobile = (this.app as any).isMobile || false;
+			if (isMobile) {
+				new Notice(`WeWrite插件加载失败: ${error.message}`, 10000);
+			} else {
+				new Notice(`WeWrite plugin failed to load: ${error.message}`, 10000);
+			}
+
+			// 重新抛出错误以便Obsidian知道插件加载失败
+			throw error;
+		}
 	}
 	registerViewOnce(viewType: string) {
 		if (this.app.workspace.getLeavesOfType(viewType).length === 0) {

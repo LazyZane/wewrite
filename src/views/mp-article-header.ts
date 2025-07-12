@@ -428,6 +428,11 @@ export class MPArticleHeader {
 		return true;
 	}
 	updateHeaderProporties() {
+		// 检查组件是否已初始化
+		if (!this._title || !this._author || !this._digest || !this._needOpenComment || !this._onlyFansCanComment) {
+			return;
+		}
+
 		if (this.activeLocalDraft !== undefined) {
 			this._title.setValue(this.activeLocalDraft.title);
 			this._author.setValue(this.activeLocalDraft.author || "");
@@ -439,8 +444,9 @@ export class MPArticleHeader {
 				(this.activeLocalDraft.only_fans_can_comment || 0) > 0
 			);
 			this.cover_image = this.activeLocalDraft.cover_image_url || "";
-			const x = this.activeLocalDraft.pic_crop_235_1?.split(" ")[0] || 0;
-			const y = this.activeLocalDraft.pic_crop_235_1?.split(" ")[1] || 0;
+			const cropData = this.activeLocalDraft.pic_crop_235_1?.split(" ") || ["0", "0"];
+			const x = cropData[0] || 0;
+			const y = cropData[1] || 0;
 		} else {
 			this._title.setValue("");
 			this._author.setValue("");
@@ -451,7 +457,7 @@ export class MPArticleHeader {
 			const x = 0;
 			const y = 0;
 		}
-		
+
 		this.setCoverImageXY();
 		this.plugin.messageService.sendMessage(
 			"draft-title-updated",

@@ -39,8 +39,42 @@ export type LocalDraftItem = {
 }
 
 export const initDraftDB = () => {
-	const db = new PouchDB('wewrite-local-drafts');
-	return  db;
+	try {
+		console.log('[WeWrite] Initializing Draft PouchDB...');
+
+		// 移动端特殊配置
+		const isMobile = (window as any).app?.isMobile || false;
+		const dbOptions: any = {
+			name: 'wewrite-local-drafts'
+		};
+
+		if (isMobile) {
+			console.log('[WeWrite] Applying mobile-specific Draft PouchDB configuration...');
+			dbOptions.adapter = 'idb';
+			dbOptions.auto_compaction = true;
+		}
+
+		const db = new PouchDB(dbOptions);
+		console.log('[WeWrite] Draft PouchDB initialized successfully');
+		return db;
+	} catch (error) {
+		console.error('[WeWrite] Failed to initialize Draft PouchDB:', error);
+
+		// 移动端降级处理
+		const isMobile = (window as any).app?.isMobile || false;
+		if (isMobile) {
+			console.log('[WeWrite] Attempting mobile fallback for Draft DB...');
+			try {
+				const fallbackDb = new PouchDB('wewrite-local-drafts', { adapter: 'memory' });
+				console.log('[WeWrite] Mobile fallback Draft PouchDB initialized');
+				return fallbackDb;
+			} catch (fallbackError) {
+				console.error('[WeWrite] Mobile Draft fallback also failed:', fallbackError);
+			}
+		}
+
+		throw new Error(`Draft database initialization failed: ${error.message}`);
+	}
 }
 export class LocalDraftManager {
     private plugin: WeWritePlugin;

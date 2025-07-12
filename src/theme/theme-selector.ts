@@ -34,6 +34,7 @@ export class ThemeSelector {
         //clear all options
         this._themeDropdown.selectEl.length = 0
         this._themeDropdown.addOption('--default--', $t('views.theme-manager.default-theme'))
+        this._themeDropdown.addOption('--obsidian-theme--', '跟随Obsidian主题')
         themes.forEach(theme => {
             this._themeDropdown.addOption(theme.path, theme.name)
         })

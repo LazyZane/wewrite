@@ -36,6 +36,21 @@ export type AITaskAccountInfo = {
 }
 
 // export type WeWriteAccountInfo = WeChatAccountInfo | AIChatAccountInfo | AITaskAccountInfo;
+// 开头结尾模板配置
+export type HeaderFooterTemplate = {
+    enabled: boolean;
+    template: string;
+    variables: {
+        brandName?: string;
+        tagline?: string;
+        headerImage?: string;
+        footerImage?: string;
+        callToAction?: string;
+        contactInfo?: string;
+        [key: string]: string | undefined;
+    };
+}
+
 export type WeWriteSetting = {
 	useCenterToken: boolean;
     realTimeRender: boolean;
@@ -54,7 +69,9 @@ export type WeWriteSetting = {
     drawAccounts: Array<AITaskAccountInfo>;
     accountDataPath: string;
 	chatSetting: ChatSetting;
-
+    // 开头结尾配置
+    headerTemplate?: HeaderFooterTemplate;
+    footerTemplate?: HeaderFooterTemplate;
 }
 
 export type ChatSetting = {
@@ -70,8 +87,42 @@ export type ChatSetting = {
 }
 
 export const initWeWriteDB = () => {
-	const db = new PouchDB('wewrite-settings');
-	return  db;
+	try {
+		console.log('[WeWrite] Initializing PouchDB...');
+
+		// 移动端特殊配置
+		const isMobile = (window as any).app?.isMobile || false;
+		const dbOptions: any = {
+			name: 'wewrite-settings'
+		};
+
+		if (isMobile) {
+			console.log('[WeWrite] Applying mobile-specific settings PouchDB configuration...');
+			dbOptions.adapter = 'idb';
+			dbOptions.auto_compaction = true;
+		}
+
+		const db = new PouchDB(dbOptions);
+		console.log('[WeWrite] PouchDB initialized successfully');
+		return db;
+	} catch (error) {
+		console.error('[WeWrite] Failed to initialize PouchDB:', error);
+
+		// 移动端降级处理
+		const isMobile = (window as any).app?.isMobile || false;
+		if (isMobile) {
+			console.log('[WeWrite] Attempting mobile fallback for settings DB...');
+			try {
+				const fallbackDb = new PouchDB('wewrite-settings', { adapter: 'memory' });
+				console.log('[WeWrite] Mobile fallback settings PouchDB initialized');
+				return fallbackDb;
+			} catch (fallbackError) {
+				console.error('[WeWrite] Mobile settings fallback also failed:', fallbackError);
+			}
+		}
+
+		throw new Error(`Database initialization failed: ${error.message}`);
+	}
 }
 // Create a new database
 const db = initWeWriteDB();

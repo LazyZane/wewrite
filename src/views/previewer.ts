@@ -33,6 +33,7 @@ import { MPArticleHeader } from "./mp-article-header";
 import { ThemeManager } from "../theme/theme-manager";
 import { ThemeSelector } from "../theme/theme-selector";
 import { WebViewModal } from "./webview";
+import { processTemplate, mergeVariables } from "../utils/template-engine";
 import { log } from "console";
 
 export const VIEW_TYPE_WEWRITE_PREVIEW = "wewrite-article-preview";
@@ -76,6 +77,14 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 		this.getArticleProperties();
 		this.articleProperties.set("custom_theme", theme);
 		this.setArticleProperties();
+
+		// 如果切换到/从Obsidian主题，重新初始化渲染容器
+		const isObsidianTheme = theme === '--obsidian-theme--';
+		const wasObsidianTheme = this.plugin.settings.custom_theme === '--obsidian-theme--';
+		if (isObsidianTheme !== wasObsidianTheme) {
+			this.reinitializeRenderContainer();
+		}
+
 		this.renderDraft();
 	}, 2000);
 
@@ -181,55 +190,100 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 		const mainDiv = container.createDiv({
 			cls: "wewrite-previewer-container",
 		});
-		this.articleTitle = new Setting(mainDiv)
-			.setName($t("views.previewer.article-title"))
-			.setHeading()
-			.addDropdown((dropdown: DropdownComponent) => {
-				this.themeSelector.dropdown(dropdown);
-			})
+		// 创建顶部工具栏容器
+		const toolbarContainer = mainDiv.createDiv({ cls: "wewrite-integrated-toolbar" });
 
-			.addExtraButton((button) => {
-				button
-					.setIcon("refresh-cw")
-					.setTooltip($t("views.previewer.render-article"))
-					.onClick(async () => {
-						this.renderDraft();
-					});
-			})
-			.addExtraButton((button) => {
-				button
-					.setIcon("send-horizontal")
-					.setTooltip($t("views.previewer.send-article-to-draft-box"))
-					.onClick(async () => {
-						if (await this.checkCoverImage()) {
-							this.sendArticleToDraftBox();
-						} else {
-							new Notice(
-								$t("views.previewer.please-set-cover-image")
-							);
-						}
-					});
-			})
-			.addExtraButton((button) => {
-				button
-					.setIcon("clipboard-copy")
-					.setTooltip($t("views.previewer.copy-article-to-clipboard"))
-					.onClick(async () => {
-						const data = this.getArticleContent();
-						await navigator.clipboard.write([
-							new ClipboardItem({
-								"text/html": new Blob([data], {
-									type: "text/html",
-								}),
-							}),
-						]);
-						new Notice(
-							$t("views.previewer.article-copied-to-clipboard")
-						);
-					});
+		// 左侧：文章属性按钮
+		const leftSection = toolbarContainer.createDiv({ cls: "toolbar-left" });
+		const articlePropsBtn = leftSection.createEl("button", {
+			text: "文章属性",
+			cls: "toolbar-btn article-props-btn"
+		});
+
+		// 中间：主题和操作按钮
+		const centerSection = toolbarContainer.createDiv({ cls: "toolbar-center" });
+
+		// 主题选择 - 使用临时Setting来创建DropdownComponent
+		const themeContainer = centerSection.createDiv({ cls: "theme-container" });
+		themeContainer.createSpan({ text: "主题:", cls: "theme-label" });
+		const tempSetting = new Setting(themeContainer)
+			.setClass("theme-setting")
+			.addDropdown((dropdown) => {
+				this.themeSelector.dropdown(dropdown);
 			});
 
-		this.draftHeader = new MPArticleHeader(this.plugin, mainDiv);
+		// 操作按钮组 - 使用图标
+		const actionsContainer = centerSection.createDiv({ cls: "actions-container" });
+
+		const refreshBtn = actionsContainer.createEl("button", {
+			cls: "toolbar-btn action-btn icon-btn",
+			attr: { "aria-label": "刷新渲染" }
+		});
+		refreshBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<polyline points="23 4 23 10 17 10"></polyline>
+			<polyline points="1 20 1 14 7 14"></polyline>
+			<path d="m20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+		</svg>`;
+		refreshBtn.onclick = async () => {
+			this.renderDraft();
+		};
+
+		const sendBtn = actionsContainer.createEl("button", {
+			cls: "toolbar-btn action-btn icon-btn",
+			attr: { "aria-label": "发送到草稿箱" }
+		});
+		sendBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<line x1="22" y1="2" x2="11" y2="13"></line>
+			<polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+		</svg>`;
+		sendBtn.onclick = async () => {
+			if (await this.checkCoverImage()) {
+				this.sendArticleToDraftBox();
+			} else {
+				new Notice($t("views.previewer.please-set-cover-image"));
+			}
+		};
+
+		const copyBtn = actionsContainer.createEl("button", {
+			cls: "toolbar-btn action-btn icon-btn",
+			attr: { "aria-label": "复制到剪贴板" }
+		});
+		copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+			<path d="m5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+		</svg>`;
+		copyBtn.onclick = async () => {
+			const data = this.getArticleContent();
+			await navigator.clipboard.write([
+				new ClipboardItem({
+					"text/html": new Blob([data], { type: "text/html" }),
+				}),
+			]);
+			new Notice($t("views.previewer.article-copied-to-clipboard"));
+		};
+
+		// 创建文章属性下拉面板
+		const articlePropsPanel = mainDiv.createDiv({ cls: "article-props-panel" });
+		articlePropsPanel.style.display = "none"; // 默认收起
+
+		// 文章属性按钮点击事件
+		let isPanelOpen = false; // 默认收起状态
+		articlePropsBtn.textContent = "文章属性"; // 初始显示展开
+		articlePropsBtn.onclick = () => {
+			isPanelOpen = !isPanelOpen;
+			articlePropsPanel.style.display = isPanelOpen ? "block" : "none";
+			articlePropsBtn.textContent = isPanelOpen ? "收起属性" : "文章属性";
+		};
+
+		this.draftHeader = new MPArticleHeader(this.plugin, articlePropsPanel);
+
+		// 确保文章属性details在面板展开时自动展开
+		setTimeout(() => {
+			const detailsElement = articlePropsPanel.querySelector('details');
+			if (detailsElement) {
+				detailsElement.open = true; // 当面板显示时，details应该是展开的
+			}
+		}, 100);
 
 		this.renderDiv = mainDiv.createDiv({ cls: "render-container" });
 		this.renderDiv.id = "render-div";
@@ -237,16 +291,61 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 			cls: ".wewrite-render-preview",
 		})
 		this.renderPreviewer.hide()
-		let shadowDom = this.renderDiv.shawdowRoot;
+
+		this.initializeRenderContainer();
+	}
+
+	// 初始化渲染容器
+	private initializeRenderContainer() {
+		// 检查是否跟随Obsidian主题
+		const followObsidianTheme = this.plugin.settings.custom_theme === '--obsidian-theme--';
+
+		// 检查Shadow DOM支持（移动端兼容性）
+		let shadowDom = this.renderDiv.shadowRoot;
 		if (shadowDom === undefined || shadowDom === null) {
-			shadowDom = this.renderDiv.attachShadow({ mode: 'open' });
-			shadowDom.adoptedStyleSheets = [
-				ThemeManager.getInstance(this.plugin).getShadowStleSheet()
-			];
+			try {
+				// 如果跟随Obsidian主题，不使用Shadow DOM以确保完全继承Obsidian样式
+				if (followObsidianTheme) {
+					shadowDom = this.renderDiv;
+				} else if (this.renderDiv.attachShadow) {
+					// 检查是否支持attachShadow
+					shadowDom = this.renderDiv.attachShadow({ mode: 'open' });
+
+					// 检查是否支持adoptedStyleSheets
+					if (shadowDom.adoptedStyleSheets !== undefined) {
+						shadowDom.adoptedStyleSheets = [
+							ThemeManager.getInstance(this.plugin).getShadowStleSheet()
+						];
+					} else {
+						console.warn('[WeWrite] adoptedStyleSheets not supported, using fallback');
+						// 移动端fallback：直接添加style元素
+						const styleEl = shadowDom.createElement('style');
+						styleEl.textContent = ThemeManager.getInstance(this.plugin).getShadowStyleText();
+						shadowDom.appendChild(styleEl);
+					}
+				} else {
+					console.warn('[WeWrite] Shadow DOM not supported, using regular DOM');
+					// 如果不支持Shadow DOM，直接使用普通DOM
+					shadowDom = this.renderDiv;
+				}
+			} catch (error) {
+				console.error('[WeWrite] Shadow DOM creation failed:', error);
+				// Fallback到普通DOM
+				shadowDom = this.renderDiv;
+			}
 		}
 
 		this.containerDiv = shadowDom.createDiv({ cls: "wewrite-article" });
 		this.articleDiv = this.containerDiv.createDiv({ cls: "article-div" });
+	}
+
+	// 重新初始化渲染容器（用于主题切换）
+	private reinitializeRenderContainer() {
+		// 清空现有容器
+		this.renderDiv.empty();
+
+		// 重新创建Shadow DOM或普通DOM
+		this.initializeRenderContainer();
 	}
 	async checkCoverImage() {
 		return this.draftHeader.checkCoverImage();
@@ -257,9 +356,12 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 		await uploadURLImage(this.articleDiv, this.plugin.wechatClient);
 		await uploadURLVideo(this.articleDiv, this.plugin.wechatClient);
 
+		// 直接使用已经包含开头结尾的渲染内容
+		const finalContent = this.getArticleContent();
+
 		const media_id = await this.wechatClient.sendArticleToDraftBox(
 			this.draftHeader.getActiveLocalDraft()!,
-			this.getArticleContent()
+			finalContent
 		);
 
 		if (media_id) {
@@ -315,6 +417,7 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 		if (activeFile.extension !== "md") {
 			return `<h1>Not a markdown file</h1>`;
 		}
+
 		let html = await WechatRender.getInstance(this.plugin, this).parseNote(
 			activeFile.path,
 			this.renderPreviewer,
@@ -325,6 +428,8 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 		const articleSection = createEl("section", {
 			cls: "wewrite-article-content wewrite",
 		});
+
+		// 现在开头结尾已经在markdown渲染阶段统一处理了
 		const dom = sanitizeHTMLToDom(html);
 		articleSection.appendChild(dom);
 
@@ -484,4 +589,6 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 			};
 			await loadChildren(internalView);
 		}
+
+
 }

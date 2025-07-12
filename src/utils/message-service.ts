@@ -58,7 +58,11 @@ export class MessageService {
       if (listeners == undefined || listeners === null) {
         return;
       }else{
-        listeners.forEach(listener => listener(data));
+        listeners.forEach(listener => {
+          if (listener && typeof listener === 'function') {
+            listener(data);
+          }
+        });
       }
     }
   }

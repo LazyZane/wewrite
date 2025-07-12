@@ -53,8 +53,43 @@ type ASSETS = {
 }
 const MAX_COUNT = 20;
 export const initAssetsDB = () => {
-	const db = new PouchDB('wewrite-wechat-assets');
-	return  db;
+	try {
+		console.log('[WeWrite] Initializing Assets PouchDB...');
+
+		// 移动端特殊配置
+		const isMobile = (window as any).app?.isMobile || false;
+		const dbOptions: any = {
+			name: 'wewrite-wechat-assets'
+		};
+
+		if (isMobile) {
+			console.log('[WeWrite] Applying mobile-specific PouchDB configuration...');
+			// 移动端使用更简单的配置
+			dbOptions.adapter = 'idb';
+			dbOptions.auto_compaction = true;
+		}
+
+		const db = new PouchDB(dbOptions);
+		console.log('[WeWrite] Assets PouchDB initialized successfully');
+		return db;
+	} catch (error) {
+		console.error('[WeWrite] Failed to initialize Assets PouchDB:', error);
+
+		// 移动端降级处理
+		const isMobile = (window as any).app?.isMobile || false;
+		if (isMobile) {
+			console.log('[WeWrite] Attempting mobile fallback initialization...');
+			try {
+				const fallbackDb = new PouchDB('wewrite-wechat-assets', { adapter: 'memory' });
+				console.log('[WeWrite] Mobile fallback PouchDB initialized');
+				return fallbackDb;
+			} catch (fallbackError) {
+				console.error('[WeWrite] Mobile fallback also failed:', fallbackError);
+			}
+		}
+
+		throw new Error(`Assets database initialization failed: ${error.message}`);
+	}
 }
 export class AssetsManager {
     app: App;
@@ -104,9 +139,23 @@ export class AssetsManager {
         this.assets.get('draft')?.push(item)
         this.scanDraftNewsUsedImages()
     }
-    public static getInstance(app: App, plugin: WeWritePlugin): AssetsManager {
+    public static async getInstance(app: App, plugin: WeWritePlugin): Promise<AssetsManager> {
         if (!AssetsManager.instance) {
-            AssetsManager.instance = new AssetsManager(app, plugin);
+            try {
+                AssetsManager.instance = new AssetsManager(app, plugin);
+
+                // 移动端额外的初始化延迟
+                const isMobile = (app as any).isMobile || false;
+                if (isMobile) {
+                    console.log('[WeWrite] Mobile AssetsManager initialization delay...');
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+
+                console.log('[WeWrite] AssetsManager instance created successfully');
+            } catch (error) {
+                console.error('[WeWrite] Failed to create AssetsManager instance:', error);
+                throw error;
+            }
         }
         return AssetsManager.instance;
     }

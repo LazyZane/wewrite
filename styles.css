@@ -243,6 +243,201 @@ left side view
 	/* 100% 视口高度 */
 }
 
+/* 集成工具栏样式 - 固定在容器顶部 */
+.wewrite-integrated-toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 1000;
+	background: var(--background-primary);
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding: 8px 16px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	flex-shrink: 0;
+	order: -1; /* 确保工具栏在最顶部 */
+}
+
+/* 工具栏分区 */
+.wewrite-integrated-toolbar .toolbar-left {
+	display: flex;
+	align-items: center;
+	flex: 1; /* 占据剩余空间，推动右侧内容到最右边 */
+}
+
+.wewrite-integrated-toolbar .toolbar-center {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	justify-content: flex-end; /* 右对齐 */
+}
+
+/* 通用按钮样式 - 白框黑字风格 */
+.wewrite-integrated-toolbar .toolbar-btn {
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	padding: 6px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+	transition: all 0.2s ease;
+}
+
+.wewrite-integrated-toolbar .toolbar-btn:hover {
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+	transform: translateY(-1px);
+}
+
+/* 图标按钮样式 - 白框黑字风格 */
+.wewrite-integrated-toolbar .icon-btn {
+	padding: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 32px;
+	min-height: 32px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.wewrite-integrated-toolbar .icon-btn svg {
+	color: var(--text-normal);
+	transition: color 0.2s ease;
+}
+
+.wewrite-integrated-toolbar .icon-btn:hover {
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.wewrite-integrated-toolbar .icon-btn:hover svg {
+	color: var(--text-normal);
+}
+
+/* 主题选择区域 */
+.wewrite-integrated-toolbar .theme-container {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.wewrite-integrated-toolbar .theme-label {
+	font-size: 13px;
+	color: var(--text-muted);
+}
+
+/* 主题设置组件样式 */
+.wewrite-integrated-toolbar .theme-setting {
+	margin: 0;
+	padding: 0;
+	border: none;
+}
+
+.wewrite-integrated-toolbar .theme-setting .setting-item-info {
+	display: none;
+}
+
+.wewrite-integrated-toolbar .theme-setting .setting-item-control {
+	margin: 0;
+}
+
+.wewrite-integrated-toolbar .theme-setting select {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 4px 8px;
+	font-size: 13px;
+	color: var(--text-normal);
+	min-width: 120px;
+	transition: all 0.2s ease;
+}
+
+.wewrite-integrated-toolbar .theme-setting select:hover {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-hover);
+}
+
+.wewrite-integrated-toolbar .theme-setting select:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
+/* 确保下拉选项有足够对比度 */
+.wewrite-integrated-toolbar .theme-setting select option {
+	background: var(--background-primary);
+	color: var(--text-normal);
+	padding: 4px 8px;
+}
+
+/* 操作按钮组 */
+.wewrite-integrated-toolbar .actions-container {
+	display: flex;
+	gap: 8px;
+}
+
+/* 文章属性面板 - 恢复原始样式 */
+.article-props-panel {
+	margin: 0 16px; /* 与工具栏保持一致的左右间距 */
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 只做最小必要的调整 */
+.article-props-panel .wewrite-article-header details summary {
+	display: none !important; /* 隐藏重复的标题 */
+}
+
+/* 确保details内容可见 */
+.article-props-panel .wewrite-article-header details > *:not(summary) {
+	display: block !important;
+}
+
+/* 修复文章属性Setting组件的布局 */
+.article-props-panel .wewrite-article-header .setting-item {
+	display: flex !important;
+	align-items: center !important;
+	gap: 12px !important;
+	padding: 8px 0 !important;
+	border: none !important;
+	margin-bottom: 8px !important;
+}
+
+.article-props-panel .wewrite-article-header .setting-item .setting-item-info {
+	min-width: 80px !important;
+	width: 80px !important;
+	flex-shrink: 0 !important;
+	margin: 0 !important;
+}
+
+.article-props-panel .wewrite-article-header .setting-item .setting-item-control {
+	flex: 1 !important;
+	margin: 0 !important;
+	display: flex !important;
+	align-items: center !important;
+}
+
+.article-props-panel .wewrite-article-header .setting-item .setting-item-control input {
+	width: 100% !important;
+	height: 32px !important;
+	padding: 6px 8px !important;
+}
+
+/* 摘要字段特殊处理 */
+.article-props-panel .wewrite-article-header textarea.digest {
+	width: 100% !important;
+	margin: 8px 0 !important;
+	padding: 8px !important;
+	border: 1px solid var(--background-modifier-border) !important;
+	border-radius: 4px !important;
+	background: var(--background-primary) !important;
+	color: var(--text-normal) !important;
+	resize: vertical !important;
+}
+
 .wewrite-previewer-container .render-container {
 	border: 1px solid #ccc;
 	border-radius: 6px;
@@ -250,6 +445,9 @@ left side view
 	padding: 5px;
 	-webkit-user-select: text;
 	user-select: text;
+	flex: 1;
+	overflow-y: auto;
+	margin-top: 0; /* 确保紧贴工具栏 */
 }
 
 .wewrite-draft-header {

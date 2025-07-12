@@ -19,7 +19,9 @@ import {
 	AITaskAccountInfo,
 	WeChatAccountInfo,
 	WeWriteSetting,
+	HeaderFooterTemplate,
 } from "./wewrite-setting";
+import { HeaderFooterSettingsComponent } from "./header-footer-settings";
 
 interface FileSystemFileHandle {
 	createWritable(): Promise<FileSystemWritableFileStream>;
@@ -78,6 +80,7 @@ export class WeWriteSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 		this.createWeChatSettings(containerEl);
+		this.createHeaderFooterSettings(containerEl);
 		this.creatCSSStyleSetting(containerEl);
 		this.createAiChatSettings(containerEl);
 		this.createAiDrawSettings(containerEl);
@@ -733,6 +736,59 @@ export class WeWriteSettingTab extends PluginSettingTab {
 					}
 				});
 			});
+	}
+
+	createHeaderFooterSettings(containerEl: HTMLElement) {
+		// 确保默认值存在
+		if (!this.plugin.settings.headerTemplate) {
+			this.plugin.settings.headerTemplate = {
+				enabled: false,
+				template: `![]({{headerImage}})
+
+**{{brandName}}** | {{tagline}}
+
+---
+`,
+				variables: {
+					brandName: '',
+					tagline: '',
+					headerImage: ''
+				}
+			};
+		}
+
+		if (!this.plugin.settings.footerTemplate) {
+			this.plugin.settings.footerTemplate = {
+				enabled: false,
+				template: `---
+
+![]({{footerImage}})
+
+**{{callToAction}}**
+
+{{contactInfo}}
+
+*{{currentDate}}*`,
+				variables: {
+					footerImage: '',
+					callToAction: '感谢阅读！',
+					contactInfo: '- 🔔 关注我获取更多精彩内容\n- 💬 欢迎留言交流讨论'
+				}
+			};
+		}
+
+		const headerFooterComponent = new HeaderFooterSettingsComponent(
+			containerEl,
+			this.plugin.settings.headerTemplate,
+			this.plugin.settings.footerTemplate,
+			(headerTemplate: HeaderFooterTemplate, footerTemplate: HeaderFooterTemplate) => {
+				this.plugin.settings.headerTemplate = headerTemplate;
+				this.plugin.settings.footerTemplate = footerTemplate;
+				this.plugin.saveSettings();
+			}
+		);
+
+		headerFooterComponent.display();
 	}
 
 	createWeChatSettings(container: HTMLElement) {

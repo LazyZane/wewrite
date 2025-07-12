@@ -185,6 +185,9 @@ export class ThemeManager {
 		let custom_css = '' //this.defaultCssRoot.toString() //''
 		if (this.plugin.settings.custom_theme === undefined || !this.plugin.settings.custom_theme) {
 
+		} else if (this.plugin.settings.custom_theme === '--obsidian-theme--') {
+			// 跟随Obsidian主题：不添加任何自定义CSS，完全依赖Obsidian原生样式
+			custom_css = ''
 		} else {
 			// custom_css = await this.getThemeContent(this.plugin.settings.custom_theme)
 			custom_css = await this.extractCSSblocks(this.plugin.settings.custom_theme)
@@ -246,6 +249,56 @@ export class ThemeManager {
 		return sheet
 
 	}
+
+	public getShadowStyleText(): string {
+		return `
+  /* 滚动条样式 we use shadow dom, make the preview looks better.*/
+.table-container::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+	background-color: var(--scrollbar-bg);
+}
+
+.table-container::-webkit-scrollbar-thumb {
+	background-color: var(--scrollbar-thumb-bg);
+    -webkit-border-radius: var(--radius-l);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-width: 3px 3px 3px 2px;
+    min-height: 45px;
+}
+.table-container::-webkit-scrollbar-thumb:hover {
+	background-color: var(--scrollbar-thumb-hover-bg);
+}
+
+.wewrite-article::-webkit-scrollbar-corner{
+	background: transparent;
+}
+
+.wewrite-article pre::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+	background-color: var(--scrollbar-bg);
+}
+
+.wewrite-article pre::-webkit-scrollbar-thumb {
+	background-color: var(--scrollbar-thumb-bg);
+    -webkit-border-radius: var(--radius-l);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-width: 3px 3px 3px 2px;
+    min-height: 45px;
+}
+
+.wewrite-article pre::-webkit-scrollbar-thumb:hover {
+	background-color: var(--scrollbar-thumb-hover-bg);
+}
+
+.wewrite-article::-webkit-scrollbar-corner{
+	background: transparent;
+}
+`;
+	}
 	private async getAllThemesInFolder(folder: TFolder): Promise<WeChatTheme[]> {
 		const themes: WeChatTheme[] = [];
 
@@ -283,10 +336,16 @@ export class ThemeManager {
 		};
 	}
 
+
+
 	public async applyTheme(htmlRoot: HTMLElement) {
 		const customCss = await this.getCSS()
 		const cssMerger = new CSSMerger()
-		await cssMerger.init(customCss)
+
+		// 如果是跟随Obsidian主题，不加载基础CSS
+		const skipBaseCSS = this.plugin.settings.custom_theme === '--obsidian-theme--'
+		await cssMerger.init(customCss, skipBaseCSS)
+
 		const node = cssMerger.applyStyleToElement(htmlRoot)
 		cssMerger.removeClassName(node)
 		return node
