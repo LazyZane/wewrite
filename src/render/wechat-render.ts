@@ -125,11 +125,26 @@ export class WechatRender {
 		// this.addExtension(new ListItem(this.plugin, this.previewRender, this.marked))
 	}
 	async parse(md: string) {
-		const { data, content } = matter(md);
-		for (const extension of this.extensions) {
-			await extension.prepare();
+		try {
+			const { data, content } = matter(md);
+			console.log('[WeWrite] 开始解析markdown，内容长度:', content.length);
+
+			for (const extension of this.extensions) {
+				try {
+					await extension.prepare();
+				} catch (error) {
+					console.error('[WeWrite] 扩展prepare失败:', extension.constructor.name, error);
+				}
+			}
+
+			console.log('[WeWrite] 所有扩展prepare完成，开始marked解析');
+			const result = await this.marked.parse(content);
+			console.log('[WeWrite] marked解析完成，结果长度:', result.length);
+			return result;
+		} catch (error) {
+			console.error('[WeWrite] parse方法出错:', error);
+			throw error;
 		}
-		return await this.marked.parse(content);
 	}
 	async postprocess(html: string) {
 		let result = html;
@@ -156,7 +171,15 @@ export class WechatRender {
 		// const renderer = new CustomMarkdownView(app, sizer, path, view);
 		// // this.plugin.registerMarkdownRendererChild(renderer);
 		// await renderer.onload();
-		const processedMarkdown = await ObsidianMarkdownRenderer.getInstance(this.plugin.app).render(
+		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+		if (!renderer) {
+			console.error('[WeWrite] ObsidianMarkdownRenderer实例为null');
+			container.empty();
+			container.hide();
+			return '<p>Renderer not available</p>';
+		}
+
+		const processedMarkdown = await renderer.render(
 			path,
 			sizer,
 			view,

@@ -28,6 +28,9 @@ export class BlockquoteRenderer extends WeWriteMarkedExtension {
   }
   async rendererCallout(_token: Tokens.Blockquote) {
     const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+    if (!renderer) {
+      return $t('render.callout-failed') + ' - renderer not available';
+    }
     const root = renderer.queryElement(this.calloutIndex, '.callout:not(.admonition)');
 	
     if (!root) {

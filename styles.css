@@ -325,6 +325,33 @@ left side view
 	gap: 6px;
 }
 
+/* 生成Obsidian主题按钮样式 */
+.wewrite-integrated-toolbar .generate-theme-btn {
+	padding: 6px 8px;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: 1px solid var(--interactive-accent);
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 12px;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 28px;
+	min-height: 28px;
+}
+
+.wewrite-integrated-toolbar .generate-theme-btn:hover {
+	background: var(--interactive-accent-hover);
+	border-color: var(--interactive-accent-hover);
+	transform: translateY(-1px);
+}
+
+.wewrite-integrated-toolbar .generate-theme-btn svg {
+	color: var(--text-on-accent);
+}
+
 .wewrite-integrated-toolbar .theme-label {
 	font-size: 13px;
 	color: var(--text-muted);

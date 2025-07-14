@@ -99,15 +99,8 @@ export class CSSMerger {
 	rules: Rules = new Map()
 
 
-	async init(customCSS: string, skipBaseCSS: boolean = false) {
-		if (!skipBaseCSS) {
-			await this.buildBaseCSS();
-		} else {
-			// 跟随Obsidian主题时，清空所有样式，只保留必要的变量
-			this.vars.clear();
-			this.rules.clear();
-		}
-
+	async init(customCSS: string) {
+		await this.buildBaseCSS();
 		try {
 			const ast = (await postcss().process(customCSS, { from: undefined })).root;
 			this.pickVariables(ast, this.vars);

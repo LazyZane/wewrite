@@ -18,7 +18,11 @@ export class RemixIconRenderer extends WeWriteMarkedExtension {
 
 
 	render(code: string, lang: string | undefined): string {
-		const root = ObsidianMarkdownRenderer.getInstance(this.plugin.app).queryElement(this.remixIndex, '.obsidian-icon.react-icon')
+		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+		if (!renderer) {
+			return '<span>remix icon renderer not available</span>';
+		}
+		const root = renderer.queryElement(this.remixIndex, '.obsidian-icon.react-icon');
 		if (!root) {
 			return '<span>remix icon not found </span>';
 		}

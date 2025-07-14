@@ -523,6 +523,10 @@ export class Embed extends WeWriteMarkedExtension {
 		const index = this.excalidrawIndex;
 		this.excalidrawIndex++;
 		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+		if (!renderer) {
+			console.error(`renderExcalidrawAsync error:`, "renderer is null");
+			return;
+		}
 		const root = renderer.queryElement(index, "div.excalidraw-svg");
 		if (!root) {
 			console.error(`renderExcalidrawAsync error:`, "root is null");
@@ -553,9 +557,11 @@ export class Embed extends WeWriteMarkedExtension {
 		if (!this.isPluginInstlled("pdf-plus")) {
 			return false;
 		}
-		const root = ObsidianMarkdownRenderer.getInstance(
-			this.plugin.app
-		).queryElement(this.pdfCropIndex, ".pdf-cropped-embed");
+		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+		if (!renderer) {
+			return $t("render.pdf-crop-failed") + " - renderer not available";
+		}
+		const root = renderer.queryElement(this.pdfCropIndex, ".pdf-cropped-embed");
 		if (!root) {
 			return $t("render.pdf-crop-failed");
 		}
@@ -563,9 +569,11 @@ export class Embed extends WeWriteMarkedExtension {
 		return `<section class="pdf-crop">${root.outerHTML}</section>`;
 	}
 	renderVideo(href: string): string | false | undefined {
-		const root = ObsidianMarkdownRenderer.getInstance(
-			this.plugin.app
-		).queryElement(this.videoIndex, "video");
+		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+		if (!renderer) {
+			return "render video failed - renderer not available";
+		}
+		const root = renderer.queryElement(this.videoIndex, "video");
 		if (!root) {
 			return "render video failed";
 		}
@@ -573,9 +581,11 @@ export class Embed extends WeWriteMarkedExtension {
 		return `<section class="video">${root.outerHTML}</section>`;
 	}
 	renderVoice(href: string): string | false | undefined {
-		const root = ObsidianMarkdownRenderer.getInstance(
-			this.plugin.app
-		).queryElement(this.voiceIndex, "audio");
+		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+		if (!renderer) {
+			return "render voice failed - renderer not available";
+		}
+		const root = renderer.queryElement(this.voiceIndex, "audio");
 		if (!root) {
 			return "render voice failed";
 		}

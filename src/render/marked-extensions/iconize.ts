@@ -17,8 +17,22 @@ export class IconizeRender extends WeWriteMarkedExtension {
     }
 
     getIconByname(iconName: string) {
-        //@ts-ignore
-        return this.icon.api.getIconByName(iconName)
+        try {
+            if (!this.icon) {
+                console.warn('[WeWrite] obsidian-icon-folder插件未安装或未启用');
+                return null;
+            }
+            //@ts-ignore
+            if (!this.icon.api) {
+                console.warn('[WeWrite] obsidian-icon-folder插件API不可用');
+                return null;
+            }
+            //@ts-ignore
+            return this.icon.api.getIconByName(iconName);
+        } catch (error) {
+            console.error('[WeWrite] getIconByname出错:', error);
+            return null;
+        }
     }
     render(iconName: string) {
         const iconObject = this.getIconByname(iconName)

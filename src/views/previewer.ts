@@ -77,14 +77,6 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 		this.getArticleProperties();
 		this.articleProperties.set("custom_theme", theme);
 		this.setArticleProperties();
-
-		// 如果切换到/从Obsidian主题，重新初始化渲染容器
-		const isObsidianTheme = theme === '--obsidian-theme--';
-		const wasObsidianTheme = this.plugin.settings.custom_theme === '--obsidian-theme--';
-		if (isObsidianTheme !== wasObsidianTheme) {
-			this.reinitializeRenderContainer();
-		}
-
 		this.renderDraft();
 	}, 2000);
 
@@ -212,6 +204,20 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 				this.themeSelector.dropdown(dropdown);
 			});
 
+		// 生成Obsidian主题按钮
+		const generateThemeBtn = themeContainer.createEl("button", {
+			cls: "toolbar-btn generate-theme-btn",
+			attr: { "aria-label": "生成Obsidian主题" }
+		});
+		generateThemeBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+			<path d="M2 17l10 5 10-5"></path>
+			<path d="M2 12l10 5 10-5"></path>
+		</svg>`;
+		generateThemeBtn.onclick = async () => {
+			await this.generateObsidianTheme();
+		};
+
 		// 操作按钮组 - 使用图标
 		const actionsContainer = centerSection.createDiv({ cls: "actions-container" });
 
@@ -292,23 +298,12 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 		})
 		this.renderPreviewer.hide()
 
-		this.initializeRenderContainer();
-	}
-
-	// 初始化渲染容器
-	private initializeRenderContainer() {
-		// 检查是否跟随Obsidian主题
-		const followObsidianTheme = this.plugin.settings.custom_theme === '--obsidian-theme--';
-
 		// 检查Shadow DOM支持（移动端兼容性）
 		let shadowDom = this.renderDiv.shadowRoot;
 		if (shadowDom === undefined || shadowDom === null) {
 			try {
-				// 如果跟随Obsidian主题，不使用Shadow DOM以确保完全继承Obsidian样式
-				if (followObsidianTheme) {
-					shadowDom = this.renderDiv;
-				} else if (this.renderDiv.attachShadow) {
-					// 检查是否支持attachShadow
+				// 检查是否支持attachShadow
+				if (this.renderDiv.attachShadow) {
 					shadowDom = this.renderDiv.attachShadow({ mode: 'open' });
 
 					// 检查是否支持adoptedStyleSheets
@@ -337,15 +332,6 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 
 		this.containerDiv = shadowDom.createDiv({ cls: "wewrite-article" });
 		this.articleDiv = this.containerDiv.createDiv({ cls: "article-div" });
-	}
-
-	// 重新初始化渲染容器（用于主题切换）
-	private reinitializeRenderContainer() {
-		// 清空现有容器
-		this.renderDiv.empty();
-
-		// 重新创建Shadow DOM或普通DOM
-		this.initializeRenderContainer();
 	}
 	async checkCoverImage() {
 		return this.draftHeader.checkCoverImage();
@@ -590,5 +576,23 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 			await loadChildren(internalView);
 		}
 
+	// 生成Obsidian主题
+	async generateObsidianTheme() {
+		try {
+			const themeManager = ThemeManager.getInstance(this.plugin);
+			const result = await themeManager.saveCurrentObsidianTheme();
+
+			if (result) {
+				new Notice(`✅ 已生成Obsidian主题: ${result}`);
+				// 刷新主题选择器
+				await this.themeSelector.updateThemeOptions();
+			} else {
+				new Notice("❌ 生成Obsidian主题失败");
+			}
+		} catch (error) {
+			console.error('[WeWrite] 生成Obsidian主题失败:', error);
+			new Notice("❌ 生成Obsidian主题时发生错误");
+		}
+	}
 
 }

@@ -81,7 +81,11 @@ export class CodeRenderer extends WeWriteMarkedExtension {
 	}
 
 	renderAdmonition(_token: Tokens.Generic, _type: string) {
-		let root = ObsidianMarkdownRenderer.getInstance(this.plugin.app).queryElement(this.admonitionIndex, '.callout.admonition')
+		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+		if (!renderer) {
+			return $t('render.admonition-failed') + ' - renderer not available';
+		}
+		let root = renderer.queryElement(this.admonitionIndex, '.callout.admonition')
 		if (!root) {
 			return $t('render.admonition-failed');
 		}
@@ -105,6 +109,9 @@ export class CodeRenderer extends WeWriteMarkedExtension {
 	}
 	async renderAdmonitionAsync(_token: Tokens.Generic, _type: string) {
 		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+		if (!renderer) {
+			return $t('render.admonition-failed') + ' - renderer not available';
+		}
 		let root = renderer.queryElement(this.admonitionIndex, '.callout.admonition')
 		if (!root) {
 			return $t('render.admonition-failed');
@@ -137,7 +144,11 @@ export class CodeRenderer extends WeWriteMarkedExtension {
 		this.mermaidIndex++;
 
 		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
-		
+		if (!renderer) {
+			console.error('[WeWrite] renderMermaidAsync: renderer not available');
+			return;
+		}
+
 		const root = renderer.queryElement(index, '.mermaid')
 		if (!root) {
 			return
@@ -147,13 +158,17 @@ export class CodeRenderer extends WeWriteMarkedExtension {
 		svg?.setAttr('width', '100%')
 		svg?.setAttr('height', '100%')
 
-		const dataUrl = await renderer.domToImage(root)
+		try {
+			const dataUrl = await renderer.domToImage(root)
 
-		const style = root.querySelector('style')
-		if (style) {
-			style.parentNode!.removeChild(style)
+			const style = root.querySelector('style')
+			if (style) {
+				style.parentNode!.removeChild(style)
+			}
+			token.html = `<section id="wewrite-mermaid-${index}" class="mermaid"> <img src="${dataUrl}" class="mermaid-image"> </section>`
+		} catch (error) {
+			console.error('[WeWrite] renderMermaidAsync domToImage出错:', error);
 		}
-		token.html = `<section id="wewrite-mermaid-${index}" class="mermaid"> <img src="${dataUrl}" class="mermaid-image"> </section>`
 	}
 
 	renderCharts(_token: Tokens.Generic) {

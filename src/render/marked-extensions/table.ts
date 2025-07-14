@@ -23,12 +23,25 @@ export class Table extends WeWriteMarkedExtension {
                     name: 'table',
                     level: 'block', // Is this a block-level or inline-level tokenizer?
                     renderer : (token:Tokens.Table)=> {
-                        const root = ObsidianMarkdownRenderer.getInstance(this.plugin.app).queryElement(this.tableIndex, 'table');
-                        if (!root) {
-                            return '<section class="table-container"><p>Table content not found</p><section>';
+                        try {
+                            const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
+                            if (!renderer) {
+                                console.warn('[WeWrite] ObsidianMarkdownRenderer实例为null');
+                                return '<section class="table-container"><p>Table renderer not available</p></section>';
+                            }
+
+                            const root = renderer.queryElement(this.tableIndex, 'table');
+                            if (!root) {
+                                console.warn(`[WeWrite] 未找到table元素，索引: ${this.tableIndex}`);
+                                return '<section class="table-container"><p>Table content not found</p></section>';
+                            }
+
+                            this.tableIndex++;
+                            return `<section class="table-container">${root.outerHTML}</section>`;
+                        } catch (error) {
+                            console.error('[WeWrite] Table renderer出错:', error);
+                            return '<section class="table-container"><p>Table rendering error</p></section>';
                         }
-                        this.tableIndex++;
-                        return `<section class="table-container">${root.outerHTML}</section>`;
                     }
                 }
             ]

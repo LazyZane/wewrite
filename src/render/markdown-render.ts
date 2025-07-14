@@ -23,10 +23,16 @@ export class ObsidianMarkdownRenderer {
     }
 
     public static getInstance(app: App,) {
-        if (!ObsidianMarkdownRenderer.instance) {
-            ObsidianMarkdownRenderer.instance = new ObsidianMarkdownRenderer(app);
+        try {
+            if (!ObsidianMarkdownRenderer.instance) {
+                console.log('[WeWrite] 创建新的ObsidianMarkdownRenderer实例');
+                ObsidianMarkdownRenderer.instance = new ObsidianMarkdownRenderer(app);
+            }
+            return ObsidianMarkdownRenderer.instance;
+        } catch (error) {
+            console.error('[WeWrite] getInstance出错:', error);
+            return null;
         }
-        return ObsidianMarkdownRenderer.instance;
     }
     public async render(path: string, container: HTMLElement, view: Component, plugin?: any): Promise<string | undefined> {
         if (path === undefined || !path || !path.toLowerCase().endsWith('.md')) {
@@ -90,8 +96,13 @@ export class ObsidianMarkdownRenderer {
     private addHeaderFooterToMarkdown(markdown: string, plugin: any): string {
         const settings = plugin.settings;
 
+        console.log('🔍 addHeaderFooterToMarkdown - 原始markdown:', markdown.substring(0, 200) + '...');
+
         // 先解析frontmatter，只使用content部分（去掉笔记属性）
         const { data, content } = matter(markdown);
+        console.log('🔍 解析frontmatter - data:', data);
+        console.log('🔍 解析frontmatter - content:', content.substring(0, 200) + '...');
+
         let result = content;
 
         // 添加开头内容
@@ -114,6 +125,7 @@ export class ObsidianMarkdownRenderer {
             }
         }
 
+        console.log('🔍 最终处理结果:', result.substring(0, 200) + '...');
         return result;
     }
 
@@ -147,20 +159,33 @@ export class ObsidianMarkdownRenderer {
         return result;
     }
     public queryElement(index: number, query: string) {
+        console.log(`[WeWrite] queryElement调用: index=${index}, query="${query}"`);
+
         if (this.previewEl === undefined || !this.previewEl) {
+            console.log('[WeWrite] queryElement: previewEl为null或undefined');
             return null
         }
         if (this.rendering) {
+            console.log('[WeWrite] queryElement: 正在渲染中，返回null');
 			return null
 		}
-		if (this.previewEl === undefined || !this.previewEl) {
-            return null
+
+        try {
+            const nodes = this.previewEl.querySelectorAll<HTMLElement>(query);
+            console.log(`[WeWrite] queryElement: 找到${nodes.length}个元素，请求索引${index}`);
+
+            if (nodes.length <= index || index < 0) {
+                console.log('[WeWrite] queryElement: 索引超出范围或为负数');
+                return null
+            }
+
+            const result = nodes[index];
+            console.log(`[WeWrite] queryElement: 返回元素`, result?.tagName);
+            return result;
+        } catch (error) {
+            console.error('[WeWrite] queryElement出错:', error);
+            return null;
         }
-        const nodes = this.previewEl.querySelectorAll<HTMLElement>(query)
-        if (nodes.length < index) {
-            return null
-        }
-        return nodes[index]
     }
    
     public async domToImage(element: HTMLElement, p:any={}): Promise<string> {

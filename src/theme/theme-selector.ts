@@ -28,13 +28,12 @@ export class ThemeSelector {
             this.plugin.messageService.sendMessage('custom-theme-changed', value)
         })
     }
-    private async updateThemeOptions() {
+    public async updateThemeOptions() {
         const themes = await this._themeManager.loadThemes()
 
         //clear all options
         this._themeDropdown.selectEl.length = 0
         this._themeDropdown.addOption('--default--', $t('views.theme-manager.default-theme'))
-        this._themeDropdown.addOption('--obsidian-theme--', '跟随Obsidian主题')
         themes.forEach(theme => {
             this._themeDropdown.addOption(theme.path, theme.name)
         })
