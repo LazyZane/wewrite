@@ -465,6 +465,17 @@ export class ThemeManager {
 			'--tag-background'
 		];
 
+		// 高亮文本相关变量
+		const highlightVars = [
+			'--text-highlight-bg',
+			'--text-highlight',
+			'--text-highlight-color',
+			'--highlight-background',
+			'--highlight-color',
+			'--mark-background',
+			'--mark-color'
+		];
+
 		// 标题层级相关变量
 		const headingVars = [
 			'--h1-color',
@@ -488,7 +499,7 @@ export class ThemeManager {
 		];
 
 		// 合并所有变量
-		const allVars = [...baseColorVars, ...codeVars, ...colorPaletteVars, ...linkTagVars, ...headingVars];
+		const allVars = [...baseColorVars, ...codeVars, ...colorPaletteVars, ...linkTagVars, ...highlightVars, ...headingVars];
 
 		// 提取变量值
 		allVars.forEach(varName => {
@@ -531,6 +542,79 @@ export class ThemeManager {
 			}
 			if (!extractedColors['code-normal']) {
 				extractedColors['code-normal'] = codeStyle.color;
+			}
+
+			// 提取加粗文本颜色
+			const strongStyle = getComputedStyle(testElements.strong);
+			if (!extractedColors['strong-color']) {
+				extractedColors['strong-color'] = strongStyle.color;
+				console.log('[WeWrite] 提取到加粗文本颜色:', strongStyle.color);
+			}
+
+			// 提取高亮文本颜色 - 多种方式尝试
+			const markStyle = getComputedStyle(testElements.mark);
+			const previewMarkStyle = getComputedStyle(testElements.previewMark);
+			const standardMarkStyle = getComputedStyle(testElements.standardMark);
+			const spanHighlightStyle = getComputedStyle(testElements.spanHighlight);
+
+			// 优先使用Obsidian的cm-highlight样式
+			let highlightBg = markStyle.backgroundColor;
+			let highlightColor = markStyle.color;
+
+			console.log('[WeWrite] 高亮样式提取:');
+			console.log('  cm-highlight:', { bg: markStyle.backgroundColor, color: markStyle.color });
+			console.log('  preview highlight:', { bg: previewMarkStyle.backgroundColor, color: previewMarkStyle.color });
+			console.log('  standard mark:', { bg: standardMarkStyle.backgroundColor, color: standardMarkStyle.color });
+			console.log('  span highlight:', { bg: spanHighlightStyle.backgroundColor, color: spanHighlightStyle.color });
+
+			// 如果cm-highlight没有有效颜色，尝试预览模式的高亮
+			if (!highlightBg || highlightBg === 'rgba(0, 0, 0, 0)' || highlightBg === 'transparent') {
+				highlightBg = previewMarkStyle.backgroundColor;
+			}
+			if (!highlightColor || highlightColor === 'rgba(0, 0, 0, 0)' || highlightColor === 'transparent') {
+				highlightColor = previewMarkStyle.color;
+			}
+
+			// 如果预览模式也没有，使用标准mark元素
+			if (!highlightBg || highlightBg === 'rgba(0, 0, 0, 0)' || highlightBg === 'transparent') {
+				highlightBg = standardMarkStyle.backgroundColor;
+			}
+			if (!highlightColor || highlightColor === 'rgba(0, 0, 0, 0)' || highlightColor === 'transparent') {
+				highlightColor = standardMarkStyle.color;
+			}
+
+			// 尝试从CSS变量中获取
+			const computedStyle = getComputedStyle(document.documentElement);
+			const obsidianHighlightBg = computedStyle.getPropertyValue('--text-highlight-bg').trim();
+			const obsidianHighlightColor = computedStyle.getPropertyValue('--text-highlight').trim();
+			const obsidianHighlightBg2 = computedStyle.getPropertyValue('--text-highlight-bg-active').trim();
+			const obsidianMarkBg = computedStyle.getPropertyValue('--text-mark-bg').trim();
+
+			console.log('[WeWrite] CSS变量提取:');
+			console.log('  --text-highlight-bg:', obsidianHighlightBg);
+			console.log('  --text-highlight:', obsidianHighlightColor);
+			console.log('  --text-highlight-bg-active:', obsidianHighlightBg2);
+			console.log('  --text-mark-bg:', obsidianMarkBg);
+
+			if (obsidianHighlightBg && obsidianHighlightBg !== '') {
+				highlightBg = obsidianHighlightBg;
+			} else if (obsidianHighlightBg2 && obsidianHighlightBg2 !== '') {
+				highlightBg = obsidianHighlightBg2;
+			} else if (obsidianMarkBg && obsidianMarkBg !== '') {
+				highlightBg = obsidianMarkBg;
+			}
+
+			if (obsidianHighlightColor && obsidianHighlightColor !== '') {
+				highlightColor = obsidianHighlightColor;
+			}
+
+			if (!extractedColors['highlight-background-color']) {
+				extractedColors['highlight-background-color'] = highlightBg;
+				console.log('[WeWrite] 提取到高亮背景颜色:', highlightBg);
+			}
+			if (!extractedColors['highlight-text-color']) {
+				extractedColors['highlight-text-color'] = highlightColor;
+				console.log('[WeWrite] 提取到高亮文本颜色:', highlightColor);
 			}
 
 			// 提取标题样式
@@ -589,6 +673,29 @@ export class ThemeManager {
 		const codeElement = document.createElement('code');
 		codeElement.textContent = 'test code';
 
+		// 创建加粗文本元素
+		const strongElement = document.createElement('strong');
+		strongElement.textContent = 'test bold text';
+
+		// 创建高亮文本元素 - 使用多种Obsidian的高亮类名
+		const markElement = document.createElement('mark');
+		markElement.className = 'cm-highlight'; // Obsidian编辑器的高亮类名
+		markElement.textContent = 'test highlight text';
+
+		// 创建Obsidian预览模式的高亮元素
+		const previewMarkElement = document.createElement('mark');
+		previewMarkElement.className = 'highlight'; // Obsidian预览模式的高亮类名
+		previewMarkElement.textContent = 'preview highlight text';
+
+		// 也创建一个标准的mark元素作为备选
+		const standardMarkElement = document.createElement('mark');
+		standardMarkElement.textContent = 'standard highlight text';
+
+		// 创建span高亮元素（WeWrite使用的格式）
+		const spanHighlightElement = document.createElement('span');
+		spanHighlightElement.className = 'wewrite-highlight';
+		spanHighlightElement.textContent = 'wewrite highlight text';
+
 		// 创建标题元素 - 放在markdown容器中
 		const headingElements: Record<string, HTMLElement> = {};
 		for (let i = 1; i <= 6; i++) {
@@ -602,6 +709,11 @@ export class ThemeManager {
 		markdownContainer.appendChild(workspaceElement);
 		markdownContainer.appendChild(linkElement);
 		markdownContainer.appendChild(codeElement);
+		markdownContainer.appendChild(strongElement);
+		markdownContainer.appendChild(markElement);
+		markdownContainer.appendChild(previewMarkElement);
+		markdownContainer.appendChild(standardMarkElement);
+		markdownContainer.appendChild(spanHighlightElement);
 		testContainer.appendChild(markdownContainer);
 		document.body.appendChild(testContainer);
 
@@ -610,6 +722,11 @@ export class ThemeManager {
 			workspace: workspaceElement,
 			link: linkElement,
 			code: codeElement,
+			strong: strongElement,
+			mark: markElement,
+			previewMark: previewMarkElement,
+			standardMark: standardMarkElement,
+			spanHighlight: spanHighlightElement,
 			...headingElements
 		};
 	}
@@ -698,6 +815,10 @@ source: Obsidian主题
 
   /* 强调文本颜色 */
   --strong-color: ${cssVars.strong};
+
+  /* 高亮文本颜色 */
+  --highlight-background-color: ${cssVars.highlightBackground};
+  --highlight-text-color: ${cssVars.highlightText};
 
   /* 链接颜色 */
   --link-color: ${cssVars.link};
@@ -838,7 +959,11 @@ source: Obsidian主题
 
 			// 标题和强调
 			heading: colors['text-accent'] || colors['text-normal'] || smartDefaults.text,
-			strong: colors['text-accent'] || colors['interactive-accent'] || smartDefaults.accent,
+			strong: colors['strong-color'] || colors['text-accent'] || colors['interactive-accent'] || smartDefaults.accent,
+
+			// 高亮文本
+			highlightBackground: colors['highlight-background-color'] || smartDefaults.highlightBackground,
+			highlightText: colors['highlight-text-color'] || smartDefaults.highlightText,
 
 			// 链接
 			link: colors['link-color'] || colors['interactive-accent'] || smartDefaults.link,
@@ -955,7 +1080,11 @@ source: Obsidian主题
 				h5Size: '1em',
 				h5Weight: '500',
 				h6Size: '0.9em',
-				h6Weight: '500'
+				h6Weight: '500',
+
+				// 深色主题的高亮颜色 - 现代化蓝色系
+				highlightBackground: '#1a237e',
+				highlightText: '#90caf9'
 			};
 		} else {
 			return {
@@ -991,7 +1120,11 @@ source: Obsidian主题
 				h5Size: '1em',
 				h5Weight: '500',
 				h6Size: '0.9em',
-				h6Weight: '500'
+				h6Weight: '500',
+
+				// 浅色主题的高亮颜色 - 现代化蓝色系
+				highlightBackground: '#e3f2fd',
+				highlightText: '#1565c0'
 			};
 		}
 	}

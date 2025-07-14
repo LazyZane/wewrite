@@ -33,6 +33,7 @@ import { Footnote } from "./marked-extensions/footnote";
 import { Links } from "./marked-extensions/links";
 import { Summary } from "./marked-extensions/summary";
 import { Image } from "./marked-extensions/image";
+import { HighlightRenderer } from "./marked-extensions/highlight";
 // import { ListItem } from './marked-extensions/list-item'
 
 const markedOptiones = {
@@ -80,6 +81,10 @@ export class WechatRender {
 		this.marked.use(extension.markedExtension());
 	}
 	useExtensions() {
+		// 🎯 将高亮渲染器放在最前面，确保优先级最高
+		this.addExtension(
+			new HighlightRenderer(this.plugin, this.previewRender, this.marked)
+		);
 		this.addExtension(
 			new Footnote(this.plugin, this.previewRender, this.marked)
 		);
@@ -168,9 +173,6 @@ export class WechatRender {
 		const sizer = renderContainer.createDiv({cls:'markdown-preview-sizer'})
 		const {app} = this.plugin
 
-		// const renderer = new CustomMarkdownView(app, sizer, path, view);
-		// // this.plugin.registerMarkdownRendererChild(renderer);
-		// await renderer.onload();
 		const renderer = ObsidianMarkdownRenderer.getInstance(this.plugin.app);
 		if (!renderer) {
 			console.error('[WeWrite] ObsidianMarkdownRenderer实例为null');

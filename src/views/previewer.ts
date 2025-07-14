@@ -259,13 +259,7 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 			<path d="m5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
 		</svg>`;
 		copyBtn.onclick = async () => {
-			const data = this.getArticleContent();
-			await navigator.clipboard.write([
-				new ClipboardItem({
-					"text/html": new Blob([data], { type: "text/html" }),
-				}),
-			]);
-			new Notice($t("views.previewer.article-copied-to-clipboard"));
+			await this.copyArticleWithImageProcessing();
 		};
 
 		// 创建文章属性下拉面板
@@ -337,44 +331,341 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 		return this.draftHeader.checkCoverImage();
 	}
 	async sendArticleToDraftBox() {
-		await uploadSVGs(this.articleDiv, this.plugin.wechatClient);
-		await uploadCanvas(this.articleDiv, this.plugin.wechatClient);
-		await uploadURLImage(this.articleDiv, this.plugin.wechatClient);
-		await uploadURLVideo(this.articleDiv, this.plugin.wechatClient);
+		try {
+			// 🎯 直接使用与复制功能完全相同的处理逻辑
+			console.log('[WeWrite] 🎯 使用复制功能的处理逻辑进行发送');
 
-		// 直接使用已经包含开头结尾的渲染内容
-		const finalContent = this.getArticleContent();
+			// 1. 克隆DOM以避免影响原始预览
+			const clonedDiv = this.articleDiv.cloneNode(true) as HTMLElement;
 
-		const media_id = await this.wechatClient.sendArticleToDraftBox(
-			this.draftHeader.getActiveLocalDraft()!,
-			finalContent
-		);
+			// 2. 临时添加到文档中以获取正确的计算样式
+			clonedDiv.style.position = 'absolute';
+			clonedDiv.style.top = '-9999px';
+			clonedDiv.style.left = '-9999px';
+			clonedDiv.style.visibility = 'hidden';
+			document.body.appendChild(clonedDiv);
 
-		if (media_id) {
-			this.draftHeader.updateDraftDraftId(media_id);
-			const news_item = await this.wechatClient.getDraftById(
-				this.plugin.settings.selectedMPAccount!,
-				media_id
+			// 3. 执行图片处理（与复制功能相同）
+			await uploadSVGs(clonedDiv, this.plugin.wechatClient);
+			await uploadCanvas(clonedDiv, this.plugin.wechatClient);
+			await uploadURLImage(clonedDiv, this.plugin.wechatClient);
+			await uploadURLVideo(clonedDiv, this.plugin.wechatClient);
+
+			// 4. 应用样式转换（与复制功能相同）
+			await this.convertComputedStylesToInline(clonedDiv);
+
+		// 5. 🔧 最小侵入性修复：在发送前处理高亮问题
+		this.fixHighlightForWechat(clonedDiv);
+
+		// 6. 修复CSS变量问题：微信不支持CSS变量，需要替换为实际值
+		this.replaceCSSVariablesWithActualValues(clonedDiv);
+
+			// 7. 获取处理后的HTML内容
+			const finalContent = clonedDiv.innerHTML;
+
+			// 8. 清理临时DOM
+			document.body.removeChild(clonedDiv);
+
+			// 9. 发送到草稿箱
+			const media_id = await this.wechatClient.sendArticleToDraftBox(
+				this.draftHeader.getActiveLocalDraft()!,
+				finalContent
 			);
-			if (news_item) {
-				open(news_item[0].url);
-				const item = {
-					media_id: media_id,
-					content: {
-						news_item: news_item,
-					},
-					update_time: Date.now(),
-				};
-				this.plugin.messageService.sendMessage(
-					"draft-item-updated",
-					item
+
+			if (media_id) {
+				this.draftHeader.updateDraftDraftId(media_id);
+				const news_item = await this.wechatClient.getDraftById(
+					this.plugin.settings.selectedMPAccount!,
+					media_id
 				);
+				if (news_item) {
+					open(news_item[0].url);
+					const item = {
+						media_id: media_id,
+						content: {
+							news_item: news_item,
+						},
+						update_time: Date.now(),
+					};
+					this.plugin.messageService.sendMessage(
+						"draft-item-updated",
+						item
+					);
+				}
 			}
+		} catch (error) {
+			console.error('[WeWrite] 发送到草稿箱时发生错误:', error);
+			new Notice("发送失败，请重试");
 		}
 	}
 	public getArticleContent() {
 		return this.articleDiv.innerHTML;
 	}
+
+	/**
+	 * 复制文章内容到剪贴板，包含图片处理
+	 * 与发送到草稿箱使用相同的图片上传逻辑
+	 */
+	async copyArticleWithImageProcessing() {
+		try {
+			// 1. 显示加载提示
+			new Notice("正在处理图片，请稍候...");
+
+			// 2. 克隆DOM以避免影响原始预览
+			const clonedDiv = this.articleDiv.cloneNode(true) as HTMLElement;
+
+			// 重要：将克隆的DOM临时添加到文档中，以便获取正确的计算样式
+			clonedDiv.style.position = 'absolute';
+			clonedDiv.style.top = '-9999px';
+			clonedDiv.style.left = '-9999px';
+			clonedDiv.style.visibility = 'hidden';
+			document.body.appendChild(clonedDiv);
+
+
+
+			// 3. 统计处理前的外部图片数量
+			const externalImagesBefore = clonedDiv.querySelectorAll('img[src^="http"]:not([src*="mmbiz.qpic.cn"])');
+
+			// 4. 对克隆的DOM执行图片上传处理（与发送到草稿箱相同的逻辑）
+			await uploadSVGs(clonedDiv, this.plugin.wechatClient);
+			await uploadCanvas(clonedDiv, this.plugin.wechatClient);
+			await uploadURLImage(clonedDiv, this.plugin.wechatClient);
+			await uploadURLVideo(clonedDiv, this.plugin.wechatClient);
+
+			// 5. 统计处理后的外部图片数量
+			const externalImagesAfter = clonedDiv.querySelectorAll('img[src^="http"]:not([src*="mmbiz.qpic.cn"])');
+
+			// 6. 应用样式转换：将计算样式转换为内联样式
+			await this.convertComputedStylesToInline(clonedDiv);
+
+			// 8. 获取处理后的HTML内容
+			const processedContent = clonedDiv.innerHTML;
+
+			// 9. 清理临时DOM
+			document.body.removeChild(clonedDiv);
+
+			// 10. 复制到剪贴板
+			await navigator.clipboard.write([
+				new ClipboardItem({
+					"text/html": new Blob([processedContent], { type: "text/html" }),
+				}),
+			]);
+
+			// 8. 显示成功提示
+			const successMessage = externalImagesBefore.length > 0
+				? `文章已复制到剪贴板（${externalImagesBefore.length - externalImagesAfter.length} 张图片已转换为微信链接）`
+				: "文章已复制到剪贴板";
+
+			new Notice(successMessage);
+
+		} catch (error) {
+			console.error('[WeWrite] 复制文章时发生错误:', error);
+
+			// 发生错误时，降级到简单复制
+			try {
+				const fallbackContent = this.getArticleContent();
+				await navigator.clipboard.write([
+					new ClipboardItem({
+						"text/html": new Blob([fallbackContent], { type: "text/html" }),
+					}),
+				]);
+				new Notice("文章已复制到剪贴板（图片处理失败，使用原始链接）");
+			} catch (fallbackError) {
+				console.error('[WeWrite] 降级复制也失败:', fallbackError);
+				new Notice("复制失败，请重试");
+			}
+		}
+	}
+
+	/**
+	 * 将计算样式转换为内联样式
+	 * 确保复制到公众号时样式正确显示
+	 */
+	private async convertComputedStylesToInline(rootElement: HTMLElement): Promise<void> {
+		// 递归处理所有元素
+		this.processElementStyles(rootElement);
+
+		// 处理所有子元素
+		const allElements = rootElement.querySelectorAll('*');
+		allElements.forEach(element => {
+			if (element instanceof HTMLElement) {
+				this.processElementStyles(element);
+			}
+		});
+	}
+
+	/**
+	 * 处理单个元素的样式转换
+	 */
+	private processElementStyles(element: HTMLElement): void {
+		const computedStyle = getComputedStyle(element);
+
+		// 特别处理高亮元素
+		if (this.isHighlightElement(element)) {
+			this.processHighlightStyles(element, computedStyle);
+			// 高亮元素不需要处理通用样式，避免覆盖
+			return;
+		}
+
+		// 处理其他重要样式
+		this.processGeneralStyles(element, computedStyle);
+	}
+
+	/**
+	 * 判断是否为高亮元素
+	 * 基于实际观察，高亮元素是有特定内联样式的span
+	 */
+	private isHighlightElement(element: HTMLElement): boolean {
+		// 优先检查WeWrite高亮类名
+		if (element.classList.contains('wewrite-highlight')) {
+			console.log(`[WeWrite] ✅ 找到wewrite-highlight类名元素:`, element.textContent?.substring(0, 20));
+			return true;
+		}
+
+		// 检查传统的mark标签
+		if (element.tagName.toLowerCase() === 'mark') {
+			console.log(`[WeWrite] ✅ 找到mark标签元素:`, element.textContent?.substring(0, 20));
+			return true;
+		}
+
+		// 检查其他可能的高亮类名
+		if (element.className.includes('highlight')) {
+			console.log(`[WeWrite] ✅ 找到包含highlight的类名元素:`, element.textContent?.substring(0, 20));
+			return true;
+		}
+
+		// 检查是否为高亮span（基于内联样式特征）
+		if (element.tagName.toLowerCase() === 'span') {
+			const style = element.style;
+			const textContent = element.textContent || '';
+
+			// 检查是否有高亮特征的内联样式
+			const hasHighlightStyles =
+				// 检查是否有背景色相关样式
+				(style.backgroundColor || style.background) ||
+				// 检查是否有padding（高亮通常有padding）
+				style.padding ||
+				// 检查是否有border-radius（高亮通常有圆角）
+				style.borderRadius;
+
+			// 检查文本内容特征
+			const isReasonableLength = textContent.length > 0 && textContent.length < 50; // 高亮文本通常较短
+			const isNotWhitespace = textContent.trim().length > 0; // 不是纯空白
+
+			// 排除明显不是高亮的元素
+			const isNotTitle = !element.closest('h1, h2, h3, h4, h5, h6'); // 不在标题中
+
+			if (hasHighlightStyles && isReasonableLength && isNotWhitespace && isNotTitle) {
+				console.log(`[WeWrite] ✅ 找到疑似高亮span:`, {
+					textContent: textContent.substring(0, 20),
+					hasBackground: !!(style.backgroundColor || style.background),
+					hasPadding: !!style.padding,
+					hasBorderRadius: !!style.borderRadius
+				});
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * 处理高亮元素的样式
+	 */
+	private processHighlightStyles(element: HTMLElement, computedStyle: CSSStyleDeclaration): void {
+		console.log(`[WeWrite] 🎯 开始处理高亮元素:`, element.textContent?.substring(0, 20));
+
+		const bgColor = computedStyle.backgroundColor;
+		const textColor = computedStyle.color;
+		const padding = computedStyle.padding;
+		const borderRadius = computedStyle.borderRadius;
+
+		// 调试：检查元素的display状态
+		console.log(`[WeWrite] 处理高亮元素:`, {
+			textContent: element.textContent?.substring(0, 20),
+			display: computedStyle.display,
+			backgroundColor: bgColor,
+			color: textColor,
+			outerHTML: element.outerHTML.substring(0, 150)
+		});
+
+		// 强制设置高亮样式为内联样式
+		if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+			element.style.setProperty('background-color', bgColor, 'important');
+			console.log(`[WeWrite] ✅ 使用计算背景色: ${bgColor}`);
+		} else {
+			// 背景色透明时，使用默认的高亮背景色
+			const defaultHighlightBg = '#e3f2fd'; // 浅蓝色背景
+			element.style.setProperty('background-color', defaultHighlightBg, 'important');
+			console.log(`[WeWrite] ⚠️ 背景色透明，使用默认色: ${defaultHighlightBg}`);
+		}
+
+		if (textColor && textColor !== 'rgba(0, 0, 0, 0)') {
+			element.style.setProperty('color', textColor, 'important');
+			console.log(`[WeWrite] ✅ 使用计算文字色: ${textColor}`);
+		} else {
+			// 文字色透明时，使用默认的高亮文字色
+			const defaultHighlightColor = '#1565c0'; // 深蓝色文字
+			element.style.setProperty('color', defaultHighlightColor, 'important');
+			console.log(`[WeWrite] ⚠️ 文字色透明，使用默认色: ${defaultHighlightColor}`);
+		}
+
+		if (padding && padding !== '0px') {
+			element.style.setProperty('padding', padding, 'important');
+		}
+		if (borderRadius && borderRadius !== '0px') {
+			element.style.setProperty('border-radius', borderRadius, 'important');
+		}
+
+		// 确保高亮元素的显示样式
+		element.style.setProperty('display', 'inline', 'important');
+		element.style.setProperty('border', 'none', 'important');
+		element.style.setProperty('text-decoration', 'none', 'important');
+		element.style.setProperty('background-image', 'none', 'important');
+
+		// 添加一些高亮特有的样式
+		element.style.setProperty('padding', '0.125em 0.375em', 'important');
+		element.style.setProperty('border-radius', '0.25em', 'important');
+		element.style.setProperty('margin', '0', 'important');
+
+		console.log(`[WeWrite] ✅ 高亮样式设置完成:`, {
+			display: element.style.display,
+			backgroundColor: element.style.backgroundColor,
+			color: element.style.color,
+			allStyles: element.getAttribute('style')
+		});
+	}
+
+	/**
+	 * 处理通用样式
+	 */
+	private processGeneralStyles(element: HTMLElement, computedStyle: CSSStyleDeclaration): void {
+		// 需要转换的关键样式属性
+		const importantStyles = [
+			'font-size', 'font-weight', 'font-style', 'font-family',
+			'text-align', 'line-height', 'letter-spacing',
+			'margin', 'border', 'box-shadow'
+		];
+
+		const appliedStyles: string[] = [];
+		importantStyles.forEach(property => {
+			const value = computedStyle.getPropertyValue(property);
+			if (value &&
+			    value !== 'initial' &&
+			    value !== 'normal' &&
+			    value !== 'rgba(0, 0, 0, 0)' &&
+			    value !== '0px' &&
+			    value !== 'none') {
+				element.style.setProperty(property, value, 'important');
+				appliedStyles.push(`${property}: ${value}`);
+			}
+		});
+
+		if (appliedStyles.length > 0) {
+			console.log(`[WeWrite] 通用样式应用到 ${element.tagName}:`, appliedStyles);
+		}
+	}
+
 	// async getCSS() {
 	// 	return await ThemeManager.getInstance(this.plugin).getCSS();
 	// }
@@ -593,6 +884,94 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 			console.error('[WeWrite] 生成Obsidian主题失败:', error);
 			new Notice("❌ 生成Obsidian主题时发生错误");
 		}
+	}
+
+	/**
+	 * 🔧 最小侵入性修复：为微信处理高亮问题
+	 */
+	private fixHighlightForWechat(rootElement: HTMLElement): void {
+		console.log('[WeWrite] 🔧 开始为微信修复高亮问题');
+
+		// 1. 多种方式查找高亮元素
+		const selectors = [
+			'.wewrite-highlight',  // 我们的HighlightRenderer生成的
+			'span[style*="var(--highlight-background-color)"]',  // CSS变量
+			'span[style*="background-color"]',  // 任何有背景色的span
+			'mark'  // 标准mark标签
+		];
+
+		let totalFound = 0;
+
+		selectors.forEach((selector, selectorIndex) => {
+			const elements = rootElement.querySelectorAll(selector);
+			console.log(`[WeWrite] 🔧 选择器 "${selector}" 找到 ${elements.length} 个元素`);
+
+			elements.forEach((element, index) => {
+				if (element instanceof HTMLElement) {
+					const textContent = element.textContent || '';
+					console.log(`[WeWrite] 🔧 处理元素 ${selectorIndex}-${index}: "${textContent}"`);
+					console.log(`[WeWrite] 🔧 原始样式:`, element.getAttribute('style'));
+
+					// 添加wewrite-highlight类名
+					element.classList.add('wewrite-highlight');
+
+					// 设置强制的内联样式（微信兼容）
+					const wechatStyle =
+						'background-color: rgba(0, 61, 165, 0.08) !important; ' +
+						'color: rgb(74, 85, 104) !important; ' +
+						'padding: 2px 4px !important; ' +
+						'border-radius: 3px !important; ' +
+						'display: inline !important; ' +
+						'border: none !important; ' +
+						'text-decoration: none !important;';
+
+					element.setAttribute('style', wechatStyle);
+
+					console.log(`[WeWrite] 🔧 已修复高亮元素: "${textContent}"`);
+					console.log(`[WeWrite] 🔧 新样式:`, element.getAttribute('style'));
+					totalFound++;
+				}
+			});
+		});
+
+		console.log(`[WeWrite] 🔧 高亮修复完成，共处理 ${totalFound} 个元素`);
+	}
+
+	/**
+	 * 替换CSS变量为实际值（微信不支持CSS变量）
+	 */
+	private replaceCSSVariablesWithActualValues(rootElement: HTMLElement): void {
+		// 定义CSS变量映射
+		const cssVariableMap = new Map([
+			['var(--highlight-background-color)', 'rgba(0, 61, 165, 0.08)'],
+			['var(--highlight-background-color, #e3f2fd)', 'rgba(0, 61, 165, 0.08)'],
+			['var(--highlight-text-color)', 'rgb(74, 85, 104)'],
+			['var(--highlight-text-color, #1565c0)', 'rgb(74, 85, 104)']
+		]);
+
+		// 处理所有元素
+		const allElements = rootElement.querySelectorAll('*');
+
+		allElements.forEach(element => {
+			if (element instanceof HTMLElement) {
+				const style = element.getAttribute('style');
+				if (style) {
+					let newStyle = style;
+					let hasReplacement = false;
+
+					cssVariableMap.forEach((actualValue, cssVar) => {
+						if (newStyle.includes(cssVar)) {
+							newStyle = newStyle.replace(new RegExp(cssVar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), actualValue);
+							hasReplacement = true;
+						}
+					});
+
+					if (hasReplacement) {
+						element.setAttribute('style', newStyle);
+					}
+				}
+			}
+		});
 	}
 
 }

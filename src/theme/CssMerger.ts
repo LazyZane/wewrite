@@ -16,6 +16,7 @@ import $06 from '../assets/default-styles/06_em.css';
 import $07 from '../assets/default-styles/07_u.css';
 import $08 from '../assets/default-styles/08_del.css';
 import $09 from '../assets/default-styles/09_codespan.css';
+import $09_5 from '../assets/default-styles/09_5_highlight.css';
 import $10 from '../assets/default-styles/10_heading.css';
 import $11  from '../assets/default-styles/11_h1.css';
 import $12 from '../assets/default-styles/12_h2.css';
@@ -52,6 +53,7 @@ const baseCSS = [
 	$07,
 	$08,
 	$09,
+	$09_5,
 	$10,
 	$11,
 	$12,
@@ -82,7 +84,8 @@ const RESERVED_CLASS_PREFIX = [
 	'wx_',
 	'wx-',
 	'common-webchat',
-	'weui-'
+	'weui-',
+	'wewrite-' // 保留所有wewrite-开头的类名
 ]
 
 const isClassReserved = (className: string) => {
@@ -182,7 +185,15 @@ export class CSSMerger {
 		})
 	}
 
-	applyStyleToElement(currentNode: HTMLElement) {
+	applyStyleToElement(currentNode: HTMLElement, isRoot: boolean = true) {
+		// 如果是根调用，将CSS变量应用到传入的根元素上
+		if (isRoot) {
+			this.vars.forEach((value, prop) => {
+				currentNode.style.setProperty(prop, value);
+				console.log(`[WeWrite] 应用CSS变量到根元素: ${prop} = ${value}`);
+			});
+		}
+
 		this.rules.forEach((rule, selector) => {
 			try {
 				if (currentNode.matches(selector)) {
@@ -197,7 +208,7 @@ export class CSSMerger {
 		})
 		let element = currentNode.firstElementChild;
 		while (element) {
-			this.applyStyleToElement(element as HTMLElement);
+			this.applyStyleToElement(element as HTMLElement, false); // 递归调用时不是根元素
 			element = element.nextElementSibling;
 		}
 		return currentNode;

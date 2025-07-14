@@ -1,0 +1,158 @@
+/**
+ * 高亮文本样式
+ * 支持markdown语法: ==highlighted text==
+ */
+
+/* 基础高亮样式 - 现代化设计，支持主题变量 */
+span.wewrite-highlight,
+.wewrite-highlight,
+.wewrite-article-content span.wewrite-highlight,
+.wewrite-article-content .wewrite-highlight,
+.wewrite span.wewrite-highlight,
+.wewrite .wewrite-highlight {
+    /* 使用CSS变量，支持主题自定义，提供默认值 */
+    background-color: var(--highlight-background-color, #e3f2fd) !important;
+    color: var(--highlight-text-color, #1565c0) !important;
+
+    /* 现代化样式设计 */
+    padding: 0.125em 0.375em !important;
+    border-radius: 0.25em !important;
+    border: none !important;
+    outline: none !important;
+
+    /* 重置浏览器默认样式 */
+    background-image: none !important;
+    text-decoration: none !important;
+
+    /* 微妙的阴影效果 - 使用主题颜色的透明版本 */
+    box-shadow: 0 1px 2px rgba(21, 101, 192, 0.1) !important;
+
+    /* 确保文本可读性 */
+    font-weight: inherit !important;
+    font-style: inherit !important;
+
+    /* 微信公众号兼容性 */
+    display: inline !important;
+    box-decoration-break: clone !important;
+    -webkit-box-decoration-break: clone !important;
+
+    /* 平滑过渡效果 */
+    transition: all 0.2s ease-in-out !important;
+}
+
+/* 悬停效果（桌面端） */
+@media (hover: hover) {
+    .wewrite-article-content .wewrite-highlight:hover,
+    .wewrite-article-content span.wewrite-highlight:hover,
+    .wewrite .wewrite-highlight:hover,
+    .wewrite span.wewrite-highlight:hover,
+    span.wewrite-highlight:hover {
+        background-color: var(--highlight-hover-background-color, #bbdefb) !important;
+        transform: translateY(-0.5px) !important;
+        box-shadow: 0 2px 4px rgba(21, 101, 192, 0.15) !important;
+    }
+}
+
+/* 深色主题适配 - 现代化设计，支持主题变量 */
+@media (prefers-color-scheme: dark) {
+    span.wewrite-highlight,
+    .wewrite-highlight,
+    .wewrite-article-content span.wewrite-highlight,
+    .wewrite-article-content .wewrite-highlight,
+    .wewrite span.wewrite-highlight,
+    .wewrite .wewrite-highlight {
+        /* 深色主题下的默认值，但仍然支持CSS变量覆盖 */
+        background-color: var(--highlight-background-color, #1a237e) !important;
+        color: var(--highlight-text-color, #90caf9) !important;
+        box-shadow: 0 1px 2px rgba(144, 202, 249, 0.1) !important;
+    }
+
+    @media (hover: hover) {
+        span.wewrite-highlight:hover,
+        .wewrite-highlight:hover,
+        .wewrite-article-content span.wewrite-highlight:hover,
+        .wewrite-article-content .wewrite-highlight:hover,
+        .wewrite span.wewrite-highlight:hover,
+        .wewrite .wewrite-highlight:hover {
+            background-color: var(--highlight-hover-background-color, #283593) !important;
+            box-shadow: 0 2px 4px rgba(144, 202, 249, 0.15) !important;
+        }
+    }
+}
+
+/* 高对比度模式 - 禁用，避免干扰 */
+/*
+@media (prefers-contrast: high) {
+    .wewrite-highlight,
+    mark.wewrite-highlight {
+        background-color: var(--highlight-background-color, #ffff00);
+        color: var(--highlight-text-color, #000000);
+        border: 1px solid #000000;
+    }
+}
+*/
+
+/* 打印样式 - 禁用，避免干扰 */
+/*
+@media print {
+    .wewrite-highlight,
+    mark.wewrite-highlight {
+        background-color: transparent;
+        color: inherit;
+        border: 1px solid #000000;
+        padding: 0.1em 0.2em;
+    }
+}
+*/
+
+/* 嵌套在其他元素中的样式调整 */
+h1 .wewrite-highlight,
+h2 .wewrite-highlight,
+h3 .wewrite-highlight,
+h4 .wewrite-highlight,
+h5 .wewrite-highlight,
+h6 .wewrite-highlight {
+    /* 在标题中的高亮文本 */
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+strong .wewrite-highlight,
+.wewrite-highlight strong {
+    /* 在加粗文本中的高亮 */
+    font-weight: bold;
+}
+
+em .wewrite-highlight,
+.wewrite-highlight em {
+    /* 在斜体文本中的高亮 */
+    font-style: italic;
+}
+
+code .wewrite-highlight,
+.wewrite-highlight code {
+    /* 在代码中的高亮（虽然不常见） */
+    font-family: var(--font-monospace, 'Courier New', monospace);
+    background-color: var(--highlight-code-background, #f8f9fa);
+    border: 1px solid var(--highlight-code-border, #e9ecef);
+}
+
+/* 链接中的高亮文本 */
+a .wewrite-highlight,
+.wewrite-highlight a {
+    text-decoration: underline;
+}
+
+/* 确保在微信公众号中的兼容性 - 现代化样式，支持主题变量 */
+.wewrite-highlight {
+    /* 防止被微信样式覆盖，但仍支持主题变量 */
+    background-color: var(--highlight-background-color, #e3f2fd) !important;
+    color: var(--highlight-text-color, #1565c0) !important;
+    padding: 0.125em 0.375em !important;
+    border-radius: 0.25em !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: 0 1px 2px rgba(21, 101, 192, 0.1) !important;
+    background-image: none !important;
+    text-decoration: none !important;
+}
