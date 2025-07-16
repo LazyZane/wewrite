@@ -137,6 +137,84 @@ export async function uploadCanvas(root:HTMLElement, wechatClient:WechatClient):
     await Promise.all(uploadPromises)
 }
 
+/**
+ * 简单的ArrayBuffer转Base64函数
+ */
+function arrayBufferToBase64Simple(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+/**
+ * 将外部图片转换为Base64格式（不需要微信API）
+ * 模仿Obsidian本地图片的处理方式
+ */
+export async function convertExternalImagesToBase64(root: HTMLElement): Promise<void> {
+    const images: HTMLImageElement[] = []
+
+    // 只处理外部图床图片，跳过微信CDN和已经是Base64的图片
+    root.querySelectorAll('img').forEach(img => {
+        if (!img.src.includes('://mmbiz.qpic.cn/') &&
+            !img.src.startsWith('data:image/') &&
+            (img.src.startsWith('http://') || img.src.startsWith('https://'))) {
+            images.push(img)
+        }
+    })
+
+    console.log(`[WeWrite] Found ${images.length} external images to convert to Base64`);
+
+    const convertPromises = images.map(async (img, index) => {
+        const originalSrc = img.src;
+
+        try {
+            console.log(`[WeWrite] Converting external image ${index + 1}/${images.length} to Base64: ${originalSrc}`);
+
+            // 下载图片（复用现有的fetchImageBlob函数）
+            const blob = await fetchImageBlob(originalSrc);
+
+            if (blob) {
+                // 转换为Base64（使用简单的转换函数）
+                const arrayBuffer = await blob.arrayBuffer();
+                const base64String = arrayBufferToBase64Simple(arrayBuffer);
+                const mimeType = blob.type || 'image/jpeg';
+                const base64Url = `data:${mimeType};base64,${base64String}`;
+
+                // 替换图片src
+                img.src = base64Url;
+                // 添加data属性记录原始链接
+                img.setAttribute('data-original-src', originalSrc);
+
+                console.log(`[WeWrite] Successfully converted to Base64, size: ${base64String.length} chars, type: ${mimeType}`);
+            }
+        } catch (error) {
+            console.error(`[WeWrite] Failed to convert image to Base64: ${originalSrc}`, error);
+            // 保持原链接，不进行转换
+        }
+    })
+
+    await Promise.all(convertPromises);
+
+    // 验证转换结果
+    const remainingExternalImages = root.querySelectorAll('img[src^="http"]:not([src*="mmbiz.qpic.cn"])');
+    const convertedCount = images.length - remainingExternalImages.length;
+
+    console.log(`[WeWrite] Base64 conversion completed: ${convertedCount}/${images.length} images converted successfully`);
+
+    if (remainingExternalImages.length > 0) {
+        console.warn(`[WeWrite] Warning: ${remainingExternalImages.length} external images were not converted to Base64`);
+        remainingExternalImages.forEach((img, index) => {
+            console.warn(`[WeWrite] Unconverted image ${index + 1}: ${img.getAttribute('src')}`);
+        });
+    }
+}
+
+/**
+ * 原有的上传到微信API的函数（保留向后兼容）
+ */
 export async function uploadURLImage(root:HTMLElement, wechatClient:WechatClient):Promise<void>{
     const images: HTMLImageElement[] = []
 

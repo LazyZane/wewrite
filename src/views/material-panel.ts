@@ -67,11 +67,14 @@ export class MaterialPanel {
 		}
 	}
 	getLocalItems() {
+		if (!this.plugin.assetsManager) {
+			return;
+		}
+
 		const list = this.plugin.assetsManager.assets.get(this.type)
 
 		if (list !== undefined) {
 			list.forEach((item) => {
-
 				this.addItem(item)
 			})
 		}
@@ -81,8 +84,11 @@ export class MaterialPanel {
 		this.items = []
 		this.setTotal(0);
 
-		if (this.type === 'draft') {
+		if (!this.plugin.assetsManager) {
+			return;
+		}
 
+		if (this.type === 'draft') {
 			return await this.plugin.assetsManager.getAllDrafts((item) => {
 				this.addItem(item)
 			}, this.plugin.settings.selectedMPAccount)
@@ -95,7 +101,7 @@ export class MaterialPanel {
 	showContextMenu(mediaItem: MaterialMeidaItem, event: MouseEvent) {
 		const menu = new Menu();
 
-		if (mediaItem.type === 'image') {
+		if (mediaItem.type === 'image' && this.plugin.assetsManager) {
 			const urls = this.plugin.assetsManager.getImageUsedUrl(mediaItem)
 			if (urls === null || urls === undefined) {
 				menu.addItem((item) => {
@@ -293,6 +299,10 @@ export class MaterialPanel {
 	async initContent(): Promise<any> {
 		this.content.empty();
 		this.setTotal(0);
+
+		if (!this.plugin.assetsManager) {
+			return;
+		}
 
 		const items = this.plugin.assetsManager.assets.get(this.type)
 		if (items === undefined || items === null) {

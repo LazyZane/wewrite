@@ -16,7 +16,7 @@ h5  标题
 	--h5-text-decoration-color: var(--heading-text-decoration-color);
 	--h5-margin: var(--heading-margin);
 	/* --h5-bg: var(--wewrite-primary); */
-	--h5-bg: var(--wewrite-bg);
+	--h5-bg: transparent;
 	--h5-border-bottom-width: var(--heading-border-bottom-width);
 	/* --h5-border-bottom-color: var(--h5-bg); */
 	--h5-border-bottom-color: var(--heading-border-bottom-color);

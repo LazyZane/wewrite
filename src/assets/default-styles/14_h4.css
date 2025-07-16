@@ -16,7 +16,7 @@ h4  标题
 	--h4-text-decoration-color: var(--heading-text-decoration-color);
 	--h4-margin: var(--heading-margin);
 	/* --h4-bg: var(--wewrite-primary); */
-	--h4-bg: var(--wewrite-bg);
+	--h4-bg: transparent;
 	--h4-border-bottom-width: var(--heading-border-bottom-width);
 	/* --h4-border-bottom-color: var(--h4-bg); */
 	--h4-border-bottom-color: var(--heading-border-bottom-color);

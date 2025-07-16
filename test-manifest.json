@@ -1,0 +1,11 @@
+{
+  "id": "wewrite-mobile-test",
+  "name": "WeWrite Mobile Test",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Minimal test plugin for mobile compatibility",
+  "author": "Test",
+  "authorUrl": "",
+  "isDesktopOnly": false,
+  "main": "test-mobile.js"
+}

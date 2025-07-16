@@ -1,0 +1,12 @@
+{
+	"id": "wewrite-mobile",
+	"name": "WeWrite Mobile",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "WeWrite移动端插件 - 支持主题选择、图片Base64转换、完整Markdown语法",
+	"author": "WeWrite Team",
+	"authorUrl": "https://github.com/wewrite/wewrite",
+	"fundingUrl": "https://github.com/wewrite/wewrite",
+	"isDesktopOnly": false,
+	"main": "main.js"
+}

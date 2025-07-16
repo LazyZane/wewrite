@@ -16,7 +16,7 @@ h3  标题
 	--h3-text-decoration-color: var(--heading-text-decoration-color);
 	--h3-margin: var(--heading-margin);
 	/* --h3-bg: var(--wewrite-primary); */
-	--h3-bg: var(--wewrite-bg);
+	--h3-bg: transparent;
 	--h3-border-bottom-width: var(--heading-border-bottom-width);
 	/* --h3-border-bottom-color: var(--h3-bg); */
 	--h3-border-bottom-color: var(--heading-border-bottom-color);

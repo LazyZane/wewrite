@@ -16,7 +16,7 @@ h6  标题
 	--h6-text-decoration-color: var(--heading-text-decoration-color);
 	--h6-margin: var(--heading-margin);
 	/* --h6-bg: var(--wewrite-primary); */
-	--h6-bg: var(--wewrite-bg);
+	--h6-bg: transparent;
 	--h6-border-bottom-width: var(--heading-border-bottom-width);
 	/* --h6-border-bottom-color: var(--h6-bg); */
 	--h6-border-bottom-color: var(--heading-border-bottom-color);

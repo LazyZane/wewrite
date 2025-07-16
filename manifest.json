@@ -1,0 +1,11 @@
+{
+	"id": "wewrite",
+	"name": "WeWrite (Minimal)",
+	"version": "3.0.1-minimal",
+	"minAppVersion": "0.15.0",
+	"description": "WeWrite极简版 - 专为移动端优化的基础版本，确保移动端兼容性。",
+	"author": "WeWrite Team",
+	"authorUrl": "https://github.com/wewrite/wewrite",
+	"fundingUrl": "https://github.com/wewrite/wewrite",
+	"isDesktopOnly": false
+}

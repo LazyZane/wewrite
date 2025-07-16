@@ -25,6 +25,7 @@ import {
 	uploadSVGs,
 	uploadURLImage,
 	uploadURLVideo,
+	convertExternalImagesToBase64,
 } from "src/render/post-render";
 import { WechatRender } from "src/render/wechat-render";
 import { ResourceManager } from "../assets/resource-manager";
@@ -252,14 +253,24 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 
 		const copyBtn = actionsContainer.createEl("button", {
 			cls: "toolbar-btn action-btn icon-btn",
-			attr: { "aria-label": "复制到剪贴板" }
+			attr: {
+				"aria-label": "复制到剪贴板（Base64转换）",
+				"title": "左键：Base64转换复制\n右键：选择复制方式"
+			}
 		});
 		copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 			<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
 			<path d="m5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
 		</svg>`;
+		// 默认使用Base64转换，右键显示选项菜单
 		copyBtn.onclick = async () => {
-			await this.copyArticleWithImageProcessing();
+			await this.copyArticleWithBase64Images();
+		};
+
+		// 右键显示选项菜单
+		copyBtn.oncontextmenu = (event) => {
+			event.preventDefault();
+			this.showCopyOptionsMenu(event, copyBtn);
 		};
 
 		// 创建文章属性下拉面板
@@ -475,6 +486,172 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 				new Notice("复制失败，请重试");
 			}
 		}
+	}
+
+	/**
+	 * 复制文章内容到剪贴板，使用Base64转换图片（不需要微信API）
+	 * 模仿Obsidian本地图片的处理方式
+	 */
+	async copyArticleWithBase64Images() {
+		try {
+			// 1. 显示加载提示
+			new Notice("正在将图片转换为Base64格式，请稍候...");
+
+			// 2. 克隆DOM以避免影响原始预览
+			const clonedDiv = this.articleDiv.cloneNode(true) as HTMLElement;
+
+			// 重要：将克隆的DOM临时添加到文档中，以便获取正确的计算样式
+			clonedDiv.style.position = 'absolute';
+			clonedDiv.style.top = '-9999px';
+			clonedDiv.style.left = '-9999px';
+			clonedDiv.style.visibility = 'hidden';
+			document.body.appendChild(clonedDiv);
+
+			// 3. 统计处理前的外部图片数量
+			const externalImagesBefore = clonedDiv.querySelectorAll('img[src^="http"]:not([src*="mmbiz.qpic.cn"])');
+			console.log(`[WeWrite] Found ${externalImagesBefore.length} external images to convert to Base64`);
+
+			// 4. 对克隆的DOM执行图片处理
+			await uploadSVGs(clonedDiv, this.plugin.wechatClient);
+			await uploadCanvas(clonedDiv, this.plugin.wechatClient);
+
+			// 🎯 关键改变：使用Base64转换而不是微信API上传
+			await convertExternalImagesToBase64(clonedDiv);
+
+			await uploadURLVideo(clonedDiv, this.plugin.wechatClient);
+
+			// 5. 统计处理后的外部图片数量
+			const externalImagesAfter = clonedDiv.querySelectorAll('img[src^="http"]:not([src*="mmbiz.qpic.cn"])');
+			const convertedCount = externalImagesBefore.length - externalImagesAfter.length;
+
+			// 6. 应用样式转换：将计算样式转换为内联样式
+			await this.convertComputedStylesToInline(clonedDiv);
+
+			// 7. 获取处理后的HTML内容
+			const processedContent = clonedDiv.innerHTML;
+
+			// 8. 清理临时DOM
+			document.body.removeChild(clonedDiv);
+
+			// 9. 复制到剪贴板
+			await navigator.clipboard.write([
+				new ClipboardItem({
+					"text/html": new Blob([processedContent], { type: "text/html" }),
+				}),
+			]);
+
+			// 10. 显示成功提示
+			const successMessage = externalImagesBefore.length > 0
+				? `✅ 文章已复制到剪贴板！\n\n📊 图片处理结果：\n• ${convertedCount} 张图床图片已转换为Base64格式\n• 可直接粘贴到微信编辑器，图片会自动显示\n\n💡 右键复制按钮可选择其他复制方式`
+				: "✅ 文章已复制到剪贴板";
+
+			new Notice(successMessage, 6000);
+
+			console.log(`[WeWrite] Base64 copy completed: ${convertedCount}/${externalImagesBefore.length} images converted`);
+
+		} catch (error) {
+			console.error('[WeWrite] 复制文章时发生错误:', error);
+
+			// 发生错误时，降级到简单复制
+			try {
+				const fallbackContent = this.getArticleContent();
+				await navigator.clipboard.write([
+					new ClipboardItem({
+						"text/html": new Blob([fallbackContent], { type: "text/html" }),
+					}),
+				]);
+				new Notice("⚠️ Base64转换失败，已复制原始内容（图片保持原链接）");
+			} catch (fallbackError) {
+				console.error('[WeWrite] 降级复制也失败:', fallbackError);
+				new Notice("❌ 复制失败，请重试");
+			}
+		}
+	}
+
+	/**
+	 * 显示复制选项菜单
+	 */
+	private showCopyOptionsMenu(event: MouseEvent, button: HTMLElement) {
+		event.preventDefault();
+
+		// 创建菜单容器
+		const menu = document.createElement('div');
+		menu.className = 'wewrite-copy-menu';
+		menu.style.cssText = `
+			position: absolute;
+			background: white;
+			border: 1px solid #ccc;
+			border-radius: 6px;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+			z-index: 1000;
+			min-width: 200px;
+			padding: 8px 0;
+		`;
+
+		// 选项1：Base64转换（默认）
+		const option1 = document.createElement('div');
+		option1.className = 'wewrite-copy-option';
+		option1.style.cssText = `
+			padding: 8px 16px;
+			cursor: pointer;
+			border-bottom: 1px solid #eee;
+		`;
+		option1.innerHTML = `
+			<div style="font-weight: bold; color: #1a73e8;">📷 Base64转换（默认）</div>
+			<div style="font-size: 12px; color: #666; margin-top: 2px;">图床图片转Base64，无需微信API（左键默认）</div>
+		`;
+		option1.onclick = async () => {
+			document.body.removeChild(menu);
+			await this.copyArticleWithBase64Images();
+		};
+
+		// 选项2：微信API上传
+		const option2 = document.createElement('div');
+		option2.className = 'wewrite-copy-option';
+		option2.style.cssText = `
+			padding: 8px 16px;
+			cursor: pointer;
+		`;
+		option2.innerHTML = `
+			<div style="font-weight: bold; color: #333;">🔗 微信API上传</div>
+			<div style="font-size: 12px; color: #666; margin-top: 2px;">上传到微信素材库（需要API配置）</div>
+		`;
+		option2.onclick = async () => {
+			document.body.removeChild(menu);
+			await this.copyArticleWithImageProcessing();
+		};
+
+		// 添加悬停效果
+		[option1, option2].forEach(option => {
+			option.addEventListener('mouseenter', () => {
+				option.style.backgroundColor = '#f5f5f5';
+			});
+			option.addEventListener('mouseleave', () => {
+				option.style.backgroundColor = 'transparent';
+			});
+		});
+
+		menu.appendChild(option1);
+		menu.appendChild(option2);
+
+		// 定位菜单
+		const rect = button.getBoundingClientRect();
+		menu.style.left = `${rect.left}px`;
+		menu.style.top = `${rect.bottom + 5}px`;
+
+		// 添加到页面
+		document.body.appendChild(menu);
+
+		// 点击外部关闭菜单
+		const closeMenu = (e: MouseEvent) => {
+			if (!menu.contains(e.target as Node)) {
+				document.body.removeChild(menu);
+				document.removeEventListener('click', closeMenu);
+			}
+		};
+		setTimeout(() => {
+			document.addEventListener('click', closeMenu);
+		}, 100);
 	}
 
 	/**
@@ -909,6 +1086,24 @@ export class PreviewPanel extends ItemView implements PreviewRender {
 			elements.forEach((element, index) => {
 				if (element instanceof HTMLElement) {
 					const textContent = element.textContent || '';
+
+					// 🚫 排除标题中的span元素
+					const isInHeading = element.closest('h1, h2, h3, h4, h5, h6') !== null;
+					if (isInHeading) {
+						console.log(`[WeWrite] 🚫 跳过标题中的span: "${textContent}"`);
+						return;
+					}
+
+					// 🚫 排除标题相关的类名
+					const hasHeadingClass = element.classList.contains('wewrite-heading-prefix') ||
+											element.classList.contains('wewrite-heading-outbox') ||
+											element.classList.contains('wewrite-heading-leaf') ||
+											element.classList.contains('wewrite-heading-tail');
+					if (hasHeadingClass) {
+						console.log(`[WeWrite] 🚫 跳过标题相关的span: "${textContent}"`);
+						return;
+					}
+
 					console.log(`[WeWrite] 🔧 处理元素 ${selectorIndex}-${index}: "${textContent}"`);
 					console.log(`[WeWrite] 🔧 原始样式:`, element.getAttribute('style'));
 

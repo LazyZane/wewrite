@@ -16,7 +16,7 @@ h2  标题
 	--h2-text-decoration-color: var(--heading-text-decoration-color);
 	--h2-margin: var(--heading-margin);
 	/* --h2-bg: var(--wewrite-primary); */
-	--h2-bg: var(--wewrite-bg);
+	--h2-bg: transparent;
 	--h2-border-bottom-width: var(--heading-border-bottom-width);
 	/* --h2-border-bottom-color: var(--h2-bg); */
 	--h2-border-bottom-color: var(--heading-border-bottom-color);

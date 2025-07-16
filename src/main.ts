@@ -14,7 +14,7 @@ import {
 	TFile,
 	WorkspaceLeaf,
 } from "obsidian";
-import { getPublicIpAddress } from "src/utils/ip-address";
+
 import { AssetsManager } from "./assets/assets-manager";
 import { ResourceManager } from "./assets/resource-manager";
 import { $t } from "./lang/i18n";
@@ -97,7 +97,7 @@ const DEFAULT_SETTINGS: WeWriteSetting = {
 export default class WeWritePlugin extends Plugin {
 	settings: WeWriteSetting;
 	wechatClient: WechatClient;
-	assetsManager: AssetsManager;
+	assetsManager: AssetsManager | null = null;
 	aiClient: AiClient | null = null;
 	private editorChangeListener: EventRef | null = null;
 	private imageGenerateModal: ImageGenerateModal | undefined;
@@ -106,6 +106,8 @@ export default class WeWritePlugin extends Plugin {
 	resourceManager = ResourceManager.getInstance(this);
 	active: boolean = false;
 	spinner: Spinner;
+	// 新的渲染服务
+	wechatRenderService: any; // 将在onload中初始化
 
 	async saveThemeFolder() {
 		const config = {
@@ -432,6 +434,10 @@ export default class WeWritePlugin extends Plugin {
 			new Notice($t("main.no-wechat-mp-account-selected"));
 			return;
 		}
+		if (!this.assetsManager) {
+			new Notice("Assets manager not available");
+			return;
+		}
 		this.assetsManager.pullAllMaterial(this.settings.selectedMPAccount);
 	}
 	assetsUpdated() {
@@ -442,7 +448,9 @@ export default class WeWritePlugin extends Plugin {
 			return;
 		}
 		this.settings.selectedMPAccount = value;
-		this.assetsManager.loadMaterial(value);
+		if (this.assetsManager) {
+			this.assetsManager.loadMaterial(value);
+		}
 	}
 
 	createSpinner() {
@@ -470,17 +478,21 @@ export default class WeWritePlugin extends Plugin {
 		await this.loadThemeFolder();
 	}
 	async updateIpAddress(): Promise<string> {
-		return new Promise((resolve, reject) => {
-			getPublicIpAddress().then(async (ip) => {
+		return new Promise(async (resolve, reject) => {
+			try {
+				const { getPublicIpAddress } = await import("./utils/ip-address");
+				const ip = await getPublicIpAddress();
 				if (ip !== undefined && ip) {
 					this.settings.ipAddress = ip;
 					await this.saveSettings();
 					resolve(ip);
+				} else {
+					reject("No IP address received");
 				}
-			}).catch((error) => {
+			} catch (error) {
 				console.error("Error fetching public IP address:", error);
 				reject("Failed to fetch public IP address: " + error);
-			})
+			}
 		});
 	}
 
@@ -529,6 +541,11 @@ export default class WeWritePlugin extends Plugin {
 		return account.access_token;
 	}
 	async TestAccessToken(accountName: string) {
+		if (!this.wechatClient) {
+			new Notice("WeChat client not available");
+			return false;
+		}
+
 		if (this.settings.useCenterToken) {
 			return this.wechatClient.requestToken();
 		} else {
@@ -653,6 +670,9 @@ export default class WeWritePlugin extends Plugin {
 		this.saveSettings();
 	}
 	findImageMediaId(url: string) {
+		if (!this.assetsManager) {
+			return null;
+		}
 		return this.assetsManager.findMediaIdOfUrl("image", url);
 	}
 
@@ -880,30 +900,27 @@ export default class WeWritePlugin extends Plugin {
 		});
 	}
 	initDB() {
-		initWeWriteDB();
-		initAssetsDB();
-		initDraftDB();
+		try {
+			console.log('[WeWrite] Initializing databases...');
+
+			initWeWriteDB();
+			console.log('[WeWrite] WeWrite DB initialized');
+
+			initAssetsDB();
+			console.log('[WeWrite] Assets DB initialized');
+
+			initDraftDB();
+			console.log('[WeWrite] Draft DB initialized');
+
+		} catch (error) {
+			console.error('[WeWrite] Database initialization failed:', error);
+			throw error;
+		}
 	}
 	async onload() {
 		try {
 			console.log('[WeWrite] Starting plugin load...');
-
-			// 检查移动端环境
-			const isMobile = (this.app as any).isMobile || false;
-			console.log(`[WeWrite] Environment: ${isMobile ? 'Mobile' : 'Desktop'}`);
-
-			// 移动端特殊处理
-			if (isMobile) {
-				console.log('[WeWrite] Applying mobile-specific configurations...');
-				// 添加移动端特定的错误处理
-				window.addEventListener('error', (event) => {
-					console.error('[WeWrite Mobile] Global error:', event.error);
-				});
-
-				window.addEventListener('unhandledrejection', (event) => {
-					console.error('[WeWrite Mobile] Unhandled promise rejection:', event.reason);
-				});
-			}
+			console.log('[WeWrite] Platform: Desktop mode');
 
 			this.initDB();
 			console.log('[WeWrite] Database initialized');
@@ -914,11 +931,6 @@ export default class WeWritePlugin extends Plugin {
 			await this.loadSettings();
 			console.log('[WeWrite] Settings loaded');
 
-			// 移动端可能需要延迟初始化某些服务
-			if (isMobile) {
-				await new Promise(resolve => setTimeout(resolve, 100));
-			}
-
 			this.wechatClient = WechatClient.getInstance(this);
 			console.log('[WeWrite] WeChat client initialized');
 
@@ -927,6 +939,17 @@ export default class WeWritePlugin extends Plugin {
 
 			this.aiClient = AiClient.getInstance(this);
 			console.log('[WeWrite] AI client initialized');
+
+			// 桌面端渲染服务
+			try {
+				const { WechatRenderServiceImpl } = await import('./core/renderer/wechat-render-service');
+				this.wechatRenderService = new WechatRenderServiceImpl(this, 'desktop');
+				await this.wechatRenderService.initialize();
+				console.log('[WeWrite] Wechat render service initialized');
+			} catch (error) {
+				console.warn('[WeWrite] Failed to load new render service, using fallback:', error);
+				this.wechatRenderService = null;
+			}
 
 			this.registerViews();
 			console.log('[WeWrite] Views registered');
@@ -968,21 +991,17 @@ export default class WeWritePlugin extends Plugin {
 			this.hideSpinner();
 		})
 
+		// 开发模式下添加架构测试功能
+		if (process.env.NODE_ENV === 'development' || (window as any).WeWriteDebug) {
+			this.addArchitectureTestCommand();
+		}
+
 		console.log('[WeWrite] Plugin loaded successfully');
 
 		} catch (error) {
-			console.error('[WeWrite] Plugin load failed:', error);
-			console.error('[WeWrite] Error stack:', error.stack);
-
-			// 在移动端显示更友好的错误信息
-			const isMobile = (this.app as any).isMobile || false;
-			if (isMobile) {
-				new Notice(`WeWrite插件加载失败: ${error.message}`, 10000);
-			} else {
-				new Notice(`WeWrite plugin failed to load: ${error.message}`, 10000);
-			}
-
-			// 重新抛出错误以便Obsidian知道插件加载失败
+			console.error(`[WeWrite] Plugin load failed: ${error.message}`);
+			console.error(`[WeWrite] Error stack: ${error.stack}`);
+			new Notice(`WeWrite plugin failed to load: ${error.message}`, 10000);
 			throw error;
 		}
 	}
@@ -1001,7 +1020,43 @@ export default class WeWritePlugin extends Plugin {
 		this.registerViewOnce(VIEW_TYPE_MP_MATERIAL);
 	}
 
-	onunload() {
+	/**
+	 * 添加架构测试命令（开发模式）
+	 */
+	private addArchitectureTestCommand(): void {
+		this.addCommand({
+			id: 'run-architecture-test',
+			name: '运行架构测试',
+			callback: async () => {
+				try {
+					const { runArchitectureTest } = await import('./core/test/architecture-test');
+					console.log('[WeWrite] Starting architecture test...');
+					new Notice('开始运行架构测试，请查看控制台');
+
+					const summary = await runArchitectureTest();
+
+					if (summary.passRate === 100) {
+						new Notice(`🎉 架构测试全部通过！(${summary.passed}/${summary.total})`, 5000);
+					} else {
+						new Notice(`⚠️ 架构测试完成：${summary.passed}/${summary.total} 通过`, 5000);
+					}
+				} catch (error) {
+					console.error('[WeWrite] Architecture test failed:', error);
+					new Notice('架构测试失败，请查看控制台', 5000);
+				}
+			}
+		});
+
+		// 添加全局测试函数（方便在控制台调用）
+		(window as any).WeWriteTest = async () => {
+			const { runArchitectureTest } = await import('./core/test/architecture-test');
+			return await runArchitectureTest();
+		};
+
+		console.log('[WeWrite] Architecture test command added. Use Ctrl+P -> "运行架构测试" or call WeWriteTest() in console');
+	}
+
+	async onunload() {
 		if (this.editorChangeListener) {
 			this.app.workspace.offref(this.editorChangeListener);
 		}
@@ -1017,8 +1072,19 @@ export default class WeWritePlugin extends Plugin {
 		});
 		this.app.workspace.getLeavesOfType(VIEW_TYPE_WEWRITE_PREVIEW).forEach((leaf) => leaf.detach());
 		this.app.workspace.getLeavesOfType(VIEW_TYPE_MP_MATERIAL).forEach((leaf) => leaf.detach());
-	}
 
+		// 清理渲染服务
+		if (this.wechatRenderService) {
+			await this.wechatRenderService.cleanup();
+		}
+
+		// 清理全局测试函数
+		if ((window as any).WeWriteTest) {
+			delete (window as any).WeWriteTest;
+		}
+
+		console.log('[WeWrite] Plugin unloaded');
+	}
 
 
 

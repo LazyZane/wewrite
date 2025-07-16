@@ -1,0 +1,18 @@
+{
+  "name": "wewrite-mobile",
+  "version": "1.0.0",
+  "description": "WeWrite移动端专版",
+  "main": "main.js",
+  "scripts": {
+    "build": "powershell -Command \"Set-Location 'D:\\AIhub\\wewrite\\wewrite-mobile'; node build-final.mjs\"",
+    "dev": "powershell -Command \"Set-Location 'D:\\AIhub\\wewrite\\wewrite-mobile'; node build-final.mjs\""
+  },
+  "keywords": ["obsidian", "plugin", "mobile", "wewrite"],
+  "author": "WeWrite Team",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.17.3",
+    "obsidian": "latest",
+    "builtin-modules": "^3.3.0"
+  }
+}

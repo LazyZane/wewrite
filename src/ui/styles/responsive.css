@@ -1,0 +1,488 @@
+/**
+ * WeWrite 响应式CSS框架 - v3.0 移动端支持
+ * 提供统一的响应式设计系统
+ */
+
+/* ===== CSS变量定义 ===== */
+:root {
+  /* 断点定义 */
+  --mobile-small: 320px;    /* 小屏手机 */
+  --mobile-large: 480px;    /* 大屏手机 */
+  --tablet: 768px;          /* 平板 */
+  --desktop: 1024px;        /* 桌面 */
+  --desktop-large: 1440px;  /* 大屏桌面 */
+
+  /* 触摸目标尺寸 */
+  --touch-target-min: 44px; /* iOS/Android标准最小触摸目标 */
+  --touch-target-comfortable: 48px; /* 舒适的触摸目标 */
+
+  /* 间距系统 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+
+  /* 移动端特定间距 */
+  --mobile-padding: var(--spacing-md);
+  --mobile-margin: var(--spacing-sm);
+  --mobile-gap: var(--spacing-sm);
+
+  /* 字体大小 */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;   /* 防止iOS缩放的最小字体 */
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-xxl: 24px;
+
+  /* 行高 */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.8;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* 过渡动画 */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
+
+  /* Z-index层级 */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+}
+
+/* ===== 基础容器样式 ===== */
+.wewrite-container {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.wewrite-container * {
+  box-sizing: border-box;
+}
+
+/* ===== 响应式网格系统 ===== */
+.wewrite-grid {
+  display: grid;
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+.wewrite-flex {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.wewrite-flex-col {
+  flex-direction: column;
+}
+
+.wewrite-flex-wrap {
+  flex-wrap: wrap;
+}
+
+/* ===== 工具栏样式 ===== */
+.wewrite-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  min-height: var(--touch-target-min);
+}
+
+/* ===== 按钮样式 ===== */
+.wewrite-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-md);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wewrite-button:hover {
+  background: var(--background-modifier-hover);
+}
+
+.wewrite-button:active {
+  background: var(--background-modifier-active);
+  transform: scale(0.98);
+}
+
+.wewrite-button:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.wewrite-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 按钮变体 */
+.wewrite-button--primary {
+  background: var(--color-accent);
+  color: var(--text-on-accent);
+  border-color: var(--color-accent);
+}
+
+.wewrite-button--secondary {
+  background: transparent;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.wewrite-button--ghost {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+}
+
+/* ===== 输入框样式 ===== */
+.wewrite-input {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-md);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  transition: border-color var(--transition-fast);
+}
+
+.wewrite-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(var(--color-accent-rgb), 0.2);
+}
+
+/* ===== 卡片样式 ===== */
+.wewrite-card {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ===== 侧边栏样式 ===== */
+.wewrite-sidebar {
+  background: var(--background-secondary);
+  border-right: 1px solid var(--background-modifier-border);
+  overflow-y: auto;
+  transition: transform var(--transition-normal);
+}
+
+/* ===== 模态框样式 ===== */
+.wewrite-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: var(--z-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+}
+
+.wewrite-modal {
+  background: var(--background-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  z-index: var(--z-modal);
+}
+
+/* ===== 小屏手机样式 (320px - 480px) ===== */
+@media (max-width: 480px) {
+  :root {
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --mobile-padding: 12px;
+  }
+
+  .wewrite-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--spacing-sm);
+    gap: var(--spacing-xs);
+  }
+
+  .wewrite-toolbar .wewrite-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wewrite-flex {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .wewrite-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .wewrite-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    transform: translateX(-100%);
+    z-index: var(--z-fixed);
+  }
+
+  .wewrite-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .wewrite-modal {
+    margin: var(--spacing-sm);
+    max-width: calc(100vw - var(--spacing-md));
+    max-height: calc(100vh - var(--spacing-md));
+  }
+
+  /* 字体大小调整 */
+  .wewrite-button {
+    font-size: var(--font-size-base);
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  /* 触摸优化 */
+  .wewrite-button,
+  .wewrite-input {
+    min-height: var(--touch-target-comfortable);
+  }
+}
+
+/* ===== 大屏手机样式 (480px - 768px) ===== */
+@media (min-width: 481px) and (max-width: 767px) {
+  .wewrite-toolbar {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .wewrite-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .wewrite-sidebar {
+    width: 320px;
+  }
+}
+
+/* ===== 平板样式 (768px - 1024px) ===== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .wewrite-toolbar {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .wewrite-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .wewrite-sidebar {
+    position: relative;
+    width: 300px;
+    transform: none;
+  }
+
+  .wewrite-flex {
+    flex-direction: row;
+  }
+}
+
+/* ===== 桌面样式 (1024px+) ===== */
+@media (min-width: 1024px) {
+  .wewrite-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .wewrite-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .wewrite-sidebar {
+    width: 350px;
+  }
+
+  /* 桌面端悬停效果 */
+  .wewrite-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+/* ===== 大屏桌面样式 (1440px+) ===== */
+@media (min-width: 1440px) {
+  .wewrite-container {
+    max-width: 1400px;
+  }
+
+  .wewrite-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* ===== 触摸设备优化 ===== */
+@media (hover: none) and (pointer: coarse) {
+  /* 移除悬停效果 */
+  .wewrite-button:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* 增强触摸反馈 */
+  .wewrite-button:active {
+    transform: scale(0.95);
+    transition: transform 100ms ease-out;
+  }
+
+  /* 增大触摸目标 */
+  .wewrite-button {
+    min-height: var(--touch-target-comfortable);
+    min-width: var(--touch-target-comfortable);
+  }
+}
+
+/* ===== 高对比度模式支持 ===== */
+@media (prefers-contrast: high) {
+  .wewrite-button {
+    border-width: 2px;
+  }
+
+  .wewrite-input {
+    border-width: 2px;
+  }
+
+  .wewrite-card {
+    border-width: 2px;
+  }
+}
+
+/* ===== 减少动画模式支持 ===== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===== 暗色模式优化 ===== */
+@media (prefers-color-scheme: dark) {
+  .wewrite-card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .wewrite-modal-backdrop {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* ===== 工具类 ===== */
+.wewrite-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wewrite-hidden {
+  display: none !important;
+}
+
+.wewrite-visible {
+  display: block !important;
+}
+
+/* 移动端显示/隐藏 */
+.wewrite-mobile-only {
+  display: none;
+}
+
+.wewrite-desktop-only {
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .wewrite-mobile-only {
+    display: block;
+  }
+
+  .wewrite-desktop-only {
+    display: none;
+  }
+}
+
+/* 文本对齐 */
+.wewrite-text-center {
+  text-align: center;
+}
+
+.wewrite-text-left {
+  text-align: left;
+}
+
+.wewrite-text-right {
+  text-align: right;
+}
+
+/* 间距工具类 */
+.wewrite-p-0 { padding: 0; }
+.wewrite-p-1 { padding: var(--spacing-xs); }
+.wewrite-p-2 { padding: var(--spacing-sm); }
+.wewrite-p-3 { padding: var(--spacing-md); }
+.wewrite-p-4 { padding: var(--spacing-lg); }
+
+.wewrite-m-0 { margin: 0; }
+.wewrite-m-1 { margin: var(--spacing-xs); }
+.wewrite-m-2 { margin: var(--spacing-sm); }
+.wewrite-m-3 { margin: var(--spacing-md); }
+.wewrite-m-4 { margin: var(--spacing-lg); }
